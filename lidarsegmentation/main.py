@@ -30,7 +30,7 @@ class WidgetGallery(QWidget):
     def __init__(self, parent=None):
         super(WidgetGallery, self).__init__(parent)
 
-        self.setWindowIcon(QIcon('logo/logo.png'))
+        self.setWindowIcon(QIcon('lidarsegmentation/logo/logo.png'))
 
         self.resize(750, 750)
 

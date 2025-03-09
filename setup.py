@@ -1,5 +1,6 @@
 from setuptools import setup, find_packages
 import sys
+from lidarsegmentation import __version__
 
 
 def get_requirements():
@@ -26,7 +27,7 @@ def get_long_description():
 
 setup(
     name="lidarsegmentation",
-    version="0.1.0",
+    version=__version__,
     description="Locating Trees and Individual Tree Segmentation Using Deep Learning Models LiDAR Based ",
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
