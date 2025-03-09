@@ -4,10 +4,10 @@ from sklearn.cluster import DBSCAN
 from tqdm import tqdm
 import os
 from scipy.spatial.distance import cdist
-from settings.seg_settings import SS
-from classes.PCD_TREE import PCD_TREE
-from classes.PCD_UTILS import PCD_UTILS
-from classes.PCD import PCD
+from lidarsegmentation.settings.seg_settings import SS
+from lidarsegmentation.classes.PCD_TREE import PCD_TREE
+from lidarsegmentation.classes.PCD_UTILS import PCD_UTILS
+from lidarsegmentation.classes.PCD import PCD
 
 def makedirs_if_not_exist(path):
     if not os.path.exists(path):

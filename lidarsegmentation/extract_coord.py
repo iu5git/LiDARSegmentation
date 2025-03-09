@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-from settings.coord_settings import CS
+from lidarsegmentation.settings.coord_settings import CS
 
 
 def extract_coord(cs):

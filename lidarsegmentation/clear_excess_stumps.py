@@ -1,9 +1,9 @@
 import os
 import pandas as pd
 import numpy as np
-from settings.coord_settings import CS
+from lidarsegmentation.settings.coord_settings import CS
 import shutil
-import predict
+from lidarsegmentation import predict
 from tqdm import tqdm
 
 def count_num_files(cs):

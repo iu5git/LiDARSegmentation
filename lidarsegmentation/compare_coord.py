@@ -1,8 +1,8 @@
 import os
 import numpy as np
 import pandas as pd
-from classes.PCD import PCD
-from settings.coord_settings import CS
+from lidarsegmentation.classes.PCD import PCD
+from lidarsegmentation.settings.coord_settings import CS
 import glob
 import math
 

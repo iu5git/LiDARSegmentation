@@ -1,7 +1,7 @@
 import os
 from tqdm import tqdm
-from classes.PCD_TREE import PCD_TREE
-from settings import seg_settings as ss
+from lidarsegmentation.classes.PCD_TREE import PCD_TREE
+from lidarsegmentation.settings import seg_settings as ss
 
 def makedirs_if_not_exist(path):
     if not os.path.exists(path):

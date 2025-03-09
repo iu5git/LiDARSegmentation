@@ -1,8 +1,8 @@
 import os
-from coordinates import coordinates
-from merge_coordinates import merge_coordinates
-from clear_excess_stumps import clear_excess_stumps
-from settings.coord_settings import CS
+from lidarsegmentation.coordinates import coordinates
+from lidarsegmentation.merge_coordinates import merge_coordinates
+from lidarsegmentation.clear_excess_stumps import clear_excess_stumps
+from lidarsegmentation.settings.coord_settings import CS
 
 
 if __name__ == "__main__" :

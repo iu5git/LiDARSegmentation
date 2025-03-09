@@ -1,10 +1,10 @@
-from classes.PCD import PCD
-from classes.PCD_AREA import PCD_AREA
-from classes.PCD_TREE import PCD_TREE
+from lidarsegmentation.classes.PCD import PCD
+from lidarsegmentation.classes.PCD_AREA import PCD_AREA
+from lidarsegmentation.classes.PCD_TREE import PCD_TREE
 import os
 import numpy as np
 from tqdm import tqdm
-from classes.PCD_UTILS import PCD_UTILS
+from lidarsegmentation.classes.PCD_UTILS import PCD_UTILS
 import pandas as pd
 
 

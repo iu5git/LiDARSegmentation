@@ -1,4 +1,0 @@
-
-/home/xopc/lidarsegmentation/test_data/01_04_05_oct9_Coordinates_int7000.csv
-/home/xopc/lidarsegmentation/test_data/01_04_05_oct9_Coordinates_int5000.csv
-/home/xopc/lidarsegmentation/test_data/01_04_05_oct9_Coordinates_int1000.csv

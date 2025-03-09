@@ -1,10 +1,10 @@
 import os
-from classes.PCD import PCD
-from classes.PCD_AREA import PCD_AREA
-from classes.PCD_UTILS import PCD_UTILS
-from classes.CELL import CELL
-from classes.VOR_TES import VOR_TES
-from settings.coord_settings import CS
+from lidarsegmentation.classes.PCD import PCD
+from lidarsegmentation.classes.PCD_AREA import PCD_AREA
+from lidarsegmentation.classes.PCD_UTILS import PCD_UTILS
+from lidarsegmentation.classes.CELL import CELL
+from lidarsegmentation.classes.VOR_TES import VOR_TES
+from lidarsegmentation.settings.coord_settings import CS
 import numpy as np
 import pandas as pd
 import circle_fit as cf

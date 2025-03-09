@@ -1,7 +1,7 @@
-from settings.seg_settings import SS
+from lidarsegmentation.settings.seg_settings import SS
 import os
 from tqdm import tqdm
-from classes.PCD_TREE import PCD_TREE
+from lidarsegmentation.classes.PCD_TREE import PCD_TREE
 import pandas as pd
 
 def parameters(ss, path_file, K = 0):
