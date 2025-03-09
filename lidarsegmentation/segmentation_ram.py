@@ -1,8 +1,8 @@
 import pandas as pd
 import os
 from scipy.spatial.distance import cdist
-from lidarsegmentation.settings.seg_settings import SS
-from lidarsegmentation.classes.RAM import RAM
+from settings.seg_settings import SS
+from classes.RAM import RAM
 import numpy as np
 
 def makedirs_if_not_exist(path):

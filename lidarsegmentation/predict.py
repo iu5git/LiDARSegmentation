@@ -1,12 +1,12 @@
 import torch
 import numpy as np
-from lidarsegmentation.predictmdl.models.pointnet2_cls_ssg import get_model
-import lidarsegmentation.predictmdl.utils.pointcloud_utils as pcu
+from predictmdl.models.pointnet2_cls_ssg import get_model
+import predictmdl.utils.pointcloud_utils as pcu
 from pyntcloud import PyntCloud
 import os
 import pandas as pd
 from tqdm import tqdm
-from lidarsegmentation.settings import seg_settings as ss 
+from settings import seg_settings as ss 
 
 def farthest_point_sample(xyz, npoint):
     device = xyz.device

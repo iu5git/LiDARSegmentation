@@ -1,12 +1,12 @@
-from lidarsegmentation.classes.PCD import PCD
-from lidarsegmentation.classes.PCD_AREA import PCD_AREA
-from lidarsegmentation.classes.PCD_TREE import PCD_TREE
+from classes.PCD import PCD
+from classes.PCD_AREA import PCD_AREA
+from classes.PCD_TREE import PCD_TREE
 import os
 import numpy as np
 from tqdm import tqdm
-from lidarsegmentation.classes.PCD_UTILS import PCD_UTILS
+from classes.PCD_UTILS import PCD_UTILS
 import pandas as pd
-from lidarsegmentation.settings import seg_settings as ss
+from settings import seg_settings as ss
 
 def makedirs_if_not_exist(path):
     if not os.path.exists(path):

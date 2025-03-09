@@ -1,12 +1,12 @@
 import os
-from lidarsegmentation.segmentation_vor import segmentation_vor
-from lidarsegmentation.segmentation_ram import segmentation_ram
-from lidarsegmentation.segmentation_clear import segmentation_clear
-from lidarsegmentation.seg_after import seg_after
-from lidarsegmentation.orbit_gif import orbit_gif
-from lidarsegmentation.predict import predict
-from lidarsegmentation.parameters import parameters
-from lidarsegmentation.settings.seg_settings import SS
+from segmentation_vor import segmentation_vor
+from segmentation_ram import segmentation_ram
+from segmentation_clear import segmentation_clear
+from seg_after import seg_after
+from orbit_gif import orbit_gif
+from predict import predict
+from parameters import parameters
+from settings.seg_settings import SS
 
 
 if __name__ == "__main__" :

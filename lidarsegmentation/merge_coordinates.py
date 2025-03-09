@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
-from lidarsegmentation.settings.coord_settings import CS
+from settings.coord_settings import CS
 
 def makedirs_if_not_exist(path):
     if not os.path.exists(path):

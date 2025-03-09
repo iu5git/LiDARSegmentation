@@ -1,11 +1,11 @@
-from lidarsegmentation.classes.PCD_AREA import PCD_AREA
-from lidarsegmentation.classes.PCD_TREE import PCD_TREE
+from classes.PCD_AREA import PCD_AREA
+from classes.PCD_TREE import PCD_TREE
 import os
 import numpy as np
 from tqdm import tqdm
-from lidarsegmentation.classes.PCD_UTILS import PCD_UTILS
+from classes.PCD_UTILS import PCD_UTILS
 import pandas as pd
-from lidarsegmentation.settings.seg_settings import SS
+from settings.seg_settings import SS
 from shapely.geometry import Polygon
 
 
