@@ -112,7 +112,6 @@ cut_data_method: "voronoi_tessellation" #рекомендуется
    conda create --name pcPCDenv379 python=3.7.9
    conda activate pcPCDenv379
    pip install git+https://github.com/iu5git/LiDARSegmentation/
-   pip install torch==1.13.1+cu117 --extra-index-url https://download.pytorch.org/whl/cu117
     ```
 2. **Запуск**
 - С графическим интерфейсом:
