@@ -20,12 +20,12 @@ def get_requirements():
 
 def get_long_description():
 # Get long description from README
-    with open('readme.md', 'r', encoding='utf-8') as f:
+    with open('README.md', 'r', encoding='utf-8') as f:
         long_description = f.read()
     return long_description
 
 setup(
-    name="LiDARSegmentation",
+    name="lidarsegmentation",
     version="0.1.0",
     description="Locating Trees and Individual Tree Segmentation Using Deep Learning Models LiDAR Based ",
     long_description=get_long_description(),
