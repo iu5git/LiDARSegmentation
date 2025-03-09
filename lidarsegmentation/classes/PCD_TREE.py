@@ -1,5 +1,5 @@
-from .PCD import PCD
-from .PCD_UTILS import PCD_UTILS
+from lidarsegmentation.classes.PCD import PCD
+from lidarsegmentation.classes.PCD_UTILS import PCD_UTILS
 import numpy as np
 import pandas as pd
 from sklearn.cluster import DBSCAN

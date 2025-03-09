@@ -1,5 +1,5 @@
 import numpy as np
-from .PCD import PCD
+from lidarsegmentation.classes.PCD import PCD
 import pyvista
 import sys
 import os 

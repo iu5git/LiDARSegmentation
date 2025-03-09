@@ -5,9 +5,9 @@ from sklearn.cluster import DBSCAN
 import os
 from scipy.spatial.distance import cdist
 from tqdm import tqdm
-from classes.PCD_TREE import PCD_TREE
-from classes.PCD_UTILS import PCD_UTILS
-from classes.PCD import PCD
+from lidarsegmentation.classes.PCD_TREE import PCD_TREE
+from lidarsegmentation.classes.PCD_UTILS import PCD_UTILS
+from lidarsegmentation.classes.PCD import PCD
 
 class RAM():
     def __init__(self, path_file, coordinates, combined_dataframe, ram = None):

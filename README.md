@@ -117,7 +117,7 @@ cut_data_method: "voronoi_tessellation" #рекомендуется
 2. **Запуск**
 - С графическим интерфейсом:
     ```bash
-    python main.py
+    python -m lidarsegmentation.main
     ```
   1. **Выберите файл settings.yaml в папке проекта (пример в test_data\settings.yaml)**
   2. **Поставьте галочки по очереди на желаемых этапах**
@@ -125,8 +125,8 @@ cut_data_method: "voronoi_tessellation" #рекомендуется
 
 - Из терминала:
   ```bash
-  python pipeline_coord.py
-  python pipeline_seg.py
+  python -m lidarsegmentation.pipeline_coord
+  python -m lidarsegmentation.pipeline_seg
    ```
   1. **Укажите путь до файла settings.yaml**
   2. **Возможен запуск всех этапов по отдельности с указанием каталогов в блоке**

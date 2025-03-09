@@ -4,21 +4,21 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox,
         QStyleFactory, QTabWidget, QPlainTextEdit,
         QVBoxLayout, QWidget, QFileDialog)
 from PyQt5.QtGui import QIcon
-from settings.coord_settings import CS
-from settings.seg_settings import SS
+from lidarsegmentation.settings.coord_settings import CS
+from lidarsegmentation.settings.seg_settings import SS
 import os
-from coordinates import coordinates
-from merge_coordinates import merge_coordinates
-from clear_excess_stumps import clear_excess_stumps
+from lidarsegmentation.coordinates import coordinates
+from lidarsegmentation.merge_coordinates import merge_coordinates
+from lidarsegmentation.clear_excess_stumps import clear_excess_stumps
 import ast
 
-from segmentation_vor import segmentation_vor
-from segmentation_ram import segmentation_ram
-from segmentation_clear import segmentation_clear
+from lidarsegmentation.segmentation_vor import segmentation_vor
+from lidarsegmentation.segmentation_ram import segmentation_ram
+from lidarsegmentation.segmentation_clear import segmentation_clear
 # from seg_after import seg_after
 # from orbit_gif import orbit_gif
-from predict import predict
-from parameters import parameters
+from lidarsegmentation.predict import predict
+from lidarsegmentation.parameters import parameters
 
 def str_to_bool(s):
     if s == "True": 

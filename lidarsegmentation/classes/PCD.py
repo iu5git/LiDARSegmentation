@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import pprint
 from time import time
-from .PCD_UTILS import PCD_UTILS
+from lidarsegmentation.classes.PCD_UTILS import PCD_UTILS
 import open3d as o3d
 import laspy
 import pyvista

@@ -42,6 +42,8 @@ setup(
     entry_points={
         'console_scripts': [
             'lidarsegmentation=lidarsegmentation.main:main',
+            'lidarsegmentation-pipeline-coord=lidarsegmentation.pipeline_coord:main',
+            'lidarsegmentation-pipeline-seg=lidarsegmentation.pipeline_seg:main',
         ],
     },
     classifiers=[

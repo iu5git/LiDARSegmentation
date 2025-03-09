@@ -4,9 +4,9 @@ import os
 # from pycobra.visualisation import voronoi_finite_polygons_2d
 from scipy.spatial import Voronoi
 from shapely.geometry import Polygon
-from .PCD import PCD
-from .PCD_AREA import PCD_AREA
-from .PCD_UTILS import PCD_UTILS
+from lidarsegmentation.classes.PCD import PCD
+from lidarsegmentation.classes.PCD_AREA import PCD_AREA
+from lidarsegmentation.classes.PCD_UTILS import PCD_UTILS
 from tqdm import tqdm
 from shapely.ops import unary_union
 import matplotlib.pyplot as plt

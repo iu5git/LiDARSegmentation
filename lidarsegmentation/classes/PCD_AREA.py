@@ -1,12 +1,12 @@
-from .PCD import PCD
-from .PCD_UTILS import PCD_UTILS
+from lidarsegmentation.classes.PCD import PCD
+from lidarsegmentation.classes.PCD_UTILS import PCD_UTILS
 import numpy as np
 from scipy.spatial import Voronoi, voronoi_plot_2d
-from .PCD_TREE import PCD_TREE
+from lidarsegmentation.classes.PCD_TREE import PCD_TREE
 import matplotlib.pyplot as plt
 from shapely.geometry import Polygon, Point
 from tqdm import tqdm
-from .is_inside import is_inside_sm_parallel, parallelpointinpolygon, ray_tracing_numpy_numba, is_inside_postgis_parallel
+from lidarsegmentation.classes.is_inside import is_inside_sm_parallel, parallelpointinpolygon, ray_tracing_numpy_numba, is_inside_postgis_parallel
 
 class PCD_AREA(PCD):
     def __init__(self, points = None, intensity = None, coordinates = None, polygons = None, shp_poly = None):
