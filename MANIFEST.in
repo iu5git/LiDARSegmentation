@@ -1,0 +1,6 @@
+include README.md
+include requirements.txt
+recursive-include lidarsegmentation/logo *
+recursive-include lidarsegmentation/settings *.yaml
+recursive-include lidarsegmentation/predictmdl/checkpoints *
+recursive-include lidarsegmentation/predictmdl/models * 
