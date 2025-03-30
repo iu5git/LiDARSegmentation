@@ -109,26 +109,33 @@ cut_data_method: "voronoi_tessellation" #рекомендуется
 
 1. **Установка**:
     ```bash
-   conda create --name pcPCDenv379 python=3.7.9
-   conda activate pcPCDenv379
-   pip install git+https://github.com/iu5git/LiDARSegmentation/
+    conda create --name pcPCDenv379 python==3.7.9
+    conda activate pcPCDenv379
+    pip install git+https://github.com/iu5git/LiDARSegmentation/
     ```
+    По умолчанию, `torch` при установке должен определить конфигурацию и самостоятельно выбрать наиболее подходящий `wheel`. В случае проблем с авто-определением, установите его отдельно и повторите установку библиотеки:
+   ```
+   pip install torch==1.13.1+cu117 --extra-index-url https://download.pytorch.org/whl/torch/
+   pip install git+https://github.com/iu5git/LiDARSegmentation/
+   ```
+    где `cu117` - идентификатор версии CUDA (CUDA 11.7 в случае примера), или `cpu` для установки версии без поддержки GPU-ускорения.
+
 2. **Запуск**
 - С графическим интерфейсом:
     ```bash
     python -m lidarsegmentation.main
     ```
-  1. **Выберите файл settings.yaml в папке проекта (пример в test_data\settings.yaml)**
-  2. **Поставьте галочки по очереди на желаемых этапах**
-  3. **Запустите обработку**
+  1. Выберите файл settings.yaml в папке проекта (пример в test_data\settings.yaml)
+  2. Поставьте галочки по очереди на желаемых этапах
+  3. Запустите обработку
 
 - Из терминала:
   ```bash
   python -m lidarsegmentation.pipeline_coord
   python -m lidarsegmentation.pipeline_seg
    ```
-  1. **Укажите путь до файла settings.yaml**
-  2. **Возможен запуск всех этапов по отдельности с указанием каталогов в блоке**
+  1. Укажите путь до файла settings.yaml
+  2. Возможен запуск всех этапов по отдельности с указанием каталогов в блоке
   ```bash
   if __name__ == "__main__" :
     ss = SS()
