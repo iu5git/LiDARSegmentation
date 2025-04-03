@@ -55,19 +55,16 @@ def segmentation_vor(ss, make_binding = True):
     # pc_area = pc_area.poly_cut(shp_poly, returned = 'area')
     # pc_area.save(os.path.join(ss.path_base, "loc1_cut.pcd"))
     # #
-    pc_area.vor_regions(verbose = False)
+    pc_area.vor_regions(verbose=False)
     
     if make_binding:
         make_binding_file(pc_area, ss)
 
-    i=0
     print("Start polygons processing ...")
-    for polygon in tqdm(pc_area.polygons):
-        i+=1
-        if i<ss.first_num:
-            continue
+    regions = pc_area.polygons[ss.first_num:]
+    for i, polygon in enumerate(tqdm(regions, total=len(regions), desc='Voronoi regions'), start=ss.first_num):
         pc_poly = pc_area.poly_cut(polygon, mode = 'main')
-        if pc_poly.points.shape[0]>0:
+        if pc_poly.points.shape[0]>2:
 
             LOW = pc_poly.points.min(axis=0)[2]
             STEP = ss.STEP
@@ -81,17 +78,18 @@ def segmentation_vor(ss, make_binding = True):
             old_lc = pc_poly.coordinate
             j = 0
 
-            filename_out = str(i).rjust(4, '0') + '.pcd'
-            filename_out = f"tree_{filename_out}"
+            filename_out = f"tree_{i:04d}.pcd"
 
-            for zc in tqdm(range(2*int(pc_poly.points.max(axis=0)[2]//STEP))):
+            z_diff = pc_poly.points.max(axis=0)[2] - pc_poly.points.min(axis=0)[2]
+            n_z_steps = 2*int(z_diff//STEP)
+            for zc in tqdm(range(n_z_steps), desc='Z steps'):
                 idx = np.searchsorted(z_thresholds * pc_poly.points.max(axis=0)[2], min(LOW,pc_poly.points.max(axis=0)[2]), side='left')
                 eps_step = eps_steps[idx]
                 min_pt = min_pts[idx]
     
                 pc_l_p = pc_area.make_layer_polygon(polygon, offsetX, offsetY, pc_poly.coordinate, LOW, HIGH)
                 pc_l_p.lower_coordinate = [old_uc[0], old_uc[1], (old_lc[2]+old_uc[2])/2]
-                pc_l_p.process_layer(0.35+eps_step, min_pt, verbose = False)
+                pc_l_p.process_layer(0.35+eps_step, min_pt, verbose=False)
                 old_lc = pc_l_p.lower_coordinate
                 old_uc = pc_l_p.upper_coordinate
                 offsetX, offsetY = pc_l_p.offset[0], pc_l_p.offset[1]
