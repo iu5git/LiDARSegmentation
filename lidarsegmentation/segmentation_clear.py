@@ -87,7 +87,6 @@ def segmentation_clear(ss):
 
 
 if __name__ == "__main__" :
-    ss = SS()
     yml_path = "settings\settings.yaml"
-    ss.set(yml_path)
+    ss = SS.from_yaml(yml_path)
     segmentation_clear(ss)

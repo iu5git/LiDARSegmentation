@@ -107,9 +107,8 @@ def parameters(ss, path_file, K = 0):
     bd.to_csv(path_save, index = False, sep=';')     
 
 if __name__ == "__main__" :
-    ss = SS()
     yml_path = "settings\settings.yaml"
-    ss.set(yml_path)
+    ss = SS.from_yaml(yml_path)
     path_file = os.path.join(ss.path_base, ss.step1_folder_name, ss.step2_folder_name, ss.step3_folder_name)
     parameters(ss, path_file)
 

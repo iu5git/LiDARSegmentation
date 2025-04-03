@@ -258,8 +258,7 @@ def coordinates(intensity_cut_make, cs):
         file.close()
 
 if __name__ == "__main__" :
-    cs = CS()
     yml_path = "settings\settings.yaml"
-    cs.set(yml_path)
+    cs = CS.from_yaml(yml_path)
     intensity_cut_make = 7000
     coordinates(intensity_cut_make = intensity_cut_make, cs = cs)

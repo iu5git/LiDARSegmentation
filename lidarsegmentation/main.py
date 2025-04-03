@@ -481,10 +481,8 @@ class WidgetGallery(QWidget):
 
     def start(self):
         if self.disableWidgetsCheckBox.isChecked(): 
-            cs = CS()
-            cs.set(self.file_path_SETTINGS)
-            ss = SS()
-            ss.set(self.file_path_SETTINGS)
+            cs = CS.from_yaml(self.file_path_SETTINGS)
+            ss = SS.from_yaml(self.file_path_SETTINGS)
         if not self.disableWidgetsCheckBox.isChecked(): 
             relative_path_points = os.path.relpath(self.file_path_POINTS, self.folderPath)
             if self.file_path_TRAJ == 'empty':

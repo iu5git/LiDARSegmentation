@@ -10,9 +10,8 @@ from lidarsegmentation.settings.seg_settings import SS
 
 
 if __name__ == "__main__" :
-    ss = SS()
     yml_path = "settings\settings.yaml"
-    ss.set(yml_path)
+    ss = SS.from_yaml(yml_path)
     print("segmentation_vor")
     segmentation_vor(ss, make_binding = True)
     

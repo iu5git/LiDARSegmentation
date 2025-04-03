@@ -104,7 +104,6 @@ def merge_coordinates(cs):
     df.to_csv(save_pth, index = False, sep=';')
     
 if __name__ == "__main__" :
-    cs = CS()
     yml_path = "settings\settings.yaml"
-    cs.set(yml_path)
+    cs = CS.from_yaml(yml_path)
     merge_coordinates(cs)

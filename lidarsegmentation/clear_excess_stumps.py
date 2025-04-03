@@ -75,7 +75,6 @@ def clear_excess_stumps(cs):
     df_result.to_csv(save_pth, index = False, sep=';')
 
 if __name__ == "__main__" :
-    cs = CS()
     yml_path = "settings\settings.yaml"
-    cs.set(yml_path)
+    cs = CS.from_yaml(yml_path)
     clear_excess_stumps(cs)

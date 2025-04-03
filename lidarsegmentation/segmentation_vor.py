@@ -114,7 +114,6 @@ def segmentation_vor(ss, make_binding = True):
             pc_result.save(file_name_data_out)
 
 if __name__ == "__main__" :
-    ss = SS()
     yml_path = "settings\settings.yaml"
-    ss.set(yml_path)
+    ss = SS.from_yaml(yml_path)
     segmentation_vor(ss, make_binding = False)

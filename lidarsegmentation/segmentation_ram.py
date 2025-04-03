@@ -38,9 +38,8 @@ def segmentation_ram(ss):
     obj_ram.exploitation(path_file_save)
 
 if __name__ == "__main__" :
-    ss = SS()
     yml_path = "settings\settings.yaml"
-    ss.set(yml_path)
+    ss = SS.from_yaml(yml_path)
     segmentation_ram(ss)
 
 

@@ -1,7 +1,19 @@
 import yaml
 
 class SS():
-    def __init__(self, path_base = None, fname_points = None, fname_shape = None, csv_name_coord = None, first_num = None, STEP = None, z_thresholds = None, eps_steps = None, min_pts = None):
+    def __init__(
+        self, 
+        path_base = None, 
+        fname_points = None, 
+        fname_shape = None, 
+        csv_name_coord = None, 
+        first_num = None, 
+        STEP = None, 
+        z_thresholds = None, 
+        eps_steps = None, 
+        min_pts = None,
+        **kwargs
+    ):
         self.path_base = path_base
         self.fname_points = fname_points
         self.fname_shape = fname_shape
@@ -15,15 +27,8 @@ class SS():
         self.step2_folder_name = 'ram'
         self.step3_folder_name = 'clear'
 
-    def set(self, yml_path):
+    @staticmethod
+    def from_yaml(yml_path: str) -> 'SS':
         with open(yml_path) as f:
             data = yaml.load(f, Loader=yaml.FullLoader)
-        self.path_base = data['path_base']
-        self.fname_points = data['fname_points']
-        self.fname_shape = data['fname_shape']
-        self.csv_name_coord = data['csv_name_coord']
-        self.first_num = data['first_num']
-        self.STEP = data['STEP']
-        self.z_thresholds = data['z_thresholds']
-        self.eps_steps = data['eps_steps']
-        self.min_pts = data['min_pts']
+        return SS(**data['segmentation'], **data['paths'])
