@@ -29,14 +29,14 @@ class WidgetGallery(QWidget):
     def __init__(self, parent=None):
         super(WidgetGallery, self).__init__(parent)
 
-        self.setWindowIcon(QIcon('lidarsegmentation/logo/logo.png'))
+        self.setWindowIcon(QIcon(os.path.join('lidarsegmentation', 'logo', 'logo.png')))
 
         self.resize(750, 750)
 
         self.file_path_TRAJ = 'empty'
         self.file_path_SHAPE = 'empty'
         self.file_path_COORD = 'empty'
-        self.file_path_SETTINGS = "settings\settings.yaml"
+        self.file_path_SETTINGS = os.path.join('lidarsegmentation', 'settings', 'settings.yaml')
 
         self.createTopLeftGroupBox()
         self.createRightTabWidget()
@@ -580,7 +580,6 @@ class WidgetGallery(QWidget):
 
 
 if __name__ == '__main__':
-
     import sys
 
     app = QApplication(sys.argv)
