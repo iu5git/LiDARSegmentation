@@ -22,11 +22,16 @@ def coordinates(intensity_cut_make, cs):
     fname_data_cut = cs.fname_points.partition('.')[0] + "_cut_int" + str(cs.intensity_cut) + ".pcd"                      # Имя создаваемого файла с обрезанными данными облака по высоте и границам участка (.pcd)
     csv_name_coord = cs.fname_points.partition('.')[0] + "_Coordinates_int" + str(intensity_cut_make) + ".csv"         # Имя создаваемого файла в папке path_base/cells/stumps/ (.csv)
 
-    file_name_traj = os.path.join(cs.path_base, cs.fname_traj)
-    file_name_data = os.path.join(cs.path_base, cs.fname_points) 
-    file_shape = os.path.join(cs.path_base, cs.fname_shape) 
-    file_name_data_cut = os.path.join(cs.path_base, fname_data_cut) 
-    file_name_csv = os.path.join(cs.path_base, csv_name_coord) 
+    if cs.fname_traj is not None:
+        file_name_traj = os.path.join(cs.path_base, cs.fname_traj)
+    if cs.fname_points is not None:
+        file_name_data = os.path.join(cs.path_base, cs.fname_points) 
+    if cs.fname_shape is not None:
+        file_shape = os.path.join(cs.path_base, cs.fname_shape) 
+    if fname_data_cut is not None:
+        file_name_data_cut = os.path.join(cs.path_base, fname_data_cut) 
+    if csv_name_coord is not None:
+        file_name_csv = os.path.join(cs.path_base, csv_name_coord) 
 
     if (cs.FLAG_cut_data or cs.FLAG_make_cells) and (cs.cut_data_method == 'flood_fill'):
         pc_traj = PCD()
