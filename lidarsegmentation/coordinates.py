@@ -96,7 +96,7 @@ def coordinates(intensity_cut_make, cs):
 
         if cs.cut_data_method == 'voronoi_tessellation':
             vortes = VOR_TES(points = pc_area.points, intensity = pc_area.intensity, algo = cs.algo, n_clusters = cs.n_clusters, intensity_cut = cs.intensity_cut_vor_tes)
-            vortes.select_borders(path_file_cells, shp_poly, verbose = False)
+            vortes.select_borders(path_file_cells, shp_poly, verbose=False)
             vortes.select_clusters(path_file_cells)
         
         elif cs.cut_data_method == 'flood_fill':
@@ -158,7 +158,7 @@ def coordinates(intensity_cut_make, cs):
                             # fname_stumps_out = os.path.join(path_file_stumps, 'after_sor', filename_stumps_out) 
                             # pc_stump.save(fname_stumps_out)
                             
-                            labels_XY = pc_stump.labels_XY_dbscan(eps = cs.eps_XY)
+                            labels_XY = pc_stump.labels_XY_dbscan(eps=cs.eps_XY, max_points=cs.max_points_to_process_XY)
 
                             for j in np.unique(labels_XY):
                                 if j>-1:

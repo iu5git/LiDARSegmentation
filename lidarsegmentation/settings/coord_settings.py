@@ -1,7 +1,8 @@
 import yaml
 
 class CS():
-    def __init__(self, 
+    def __init__(
+        self, 
         FLAG_cut_data = None, 
         FLAG_make_cells = None, 
         FLAG_make_stumps = None, 
@@ -16,7 +17,9 @@ class CS():
         cell_size = None, 
         height_limit_1 = None, 
         height_limit_2 = None, 
-        eps_XY = None, eps_Z = None, 
+        eps_XY = None, 
+        eps_Z = None, 
+        max_points_to_process_XY = None,
         path_base = None, 
         fname_points = None, 
         fname_traj = None, 
@@ -41,6 +44,7 @@ class CS():
         self.height_limit_2 = height_limit_2
         self.eps_XY = eps_XY
         self.eps_Z = eps_Z
+        self.max_points_to_process_XY = max_points_to_process_XY
         self.path_base = path_base
         self.fname_points = fname_points
         self.fname_traj = fname_traj

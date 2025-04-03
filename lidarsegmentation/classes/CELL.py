@@ -7,6 +7,8 @@ from tqdm import tqdm
 import pandas as pd
 import hdbscan
 from sklearn.cluster import DBSCAN
+from typing import Optional
+
 
 def toFixed(numObj, digits=0):
     return f"{numObj:.{digits}f}"
@@ -166,9 +168,12 @@ class CELL(PCD):
         labels=clustering.labels_
         return labels
     
-    def labels_XY_dbscan(self, eps = 0.04):
+    def labels_XY_dbscan(self, eps: float = 0.04, max_points: Optional[int] = None):
         P = pd.DataFrame(self.points[:,0:2], columns = ['X','Y'])
+        if max_points is not None:
+            P = P.sample(max_points)
         X = np.asarray(P)
+        print(f'Extract labels XY shape: {X.shape}')
         if self.points.shape[0]<85000:
             clustering = DBSCAN(eps=eps, min_samples=50).fit(X) #0.35 perm = 3.5
             labels=clustering.labels_
@@ -179,14 +184,10 @@ class CELL(PCD):
     def label_Z_dbscan(self, eps = 0.35):
         P = pd.DataFrame(self.points[:,2], columns = ['Z'])
         X = np.asarray(P)   
+        print(f'Extract label Z shape: {X.shape}')
         if self.points.shape[0]<50000:
             clustering = DBSCAN(eps=eps, min_samples=50).fit(X) #0.35 perm = 3.5
             labels=clustering.labels_
         else:
             labels = np.zeros(self.points.shape[0])
         return labels
-
-
-
-
-
