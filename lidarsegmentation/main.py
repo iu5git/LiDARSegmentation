@@ -20,11 +20,10 @@ from lidarsegmentation.segmentation_clear import segmentation_clear
 from lidarsegmentation.predict import predict
 from lidarsegmentation.parameters import parameters
 
-def str_to_bool(s):
-    if s == "True": 
-        return True 
-    elif s=="False": 
-        return False 
+
+def str_to_bool(s: str) -> bool:
+    return s == "True"
+
 
 class WidgetGallery(QWidget):
     def __init__(self, parent=None):
@@ -218,7 +217,7 @@ class WidgetGallery(QWidget):
 
     def open_file_dialog_POINTS(self):
         options = QFileDialog.Options()
-        self.file_path_POINTS, _ = QFileDialog.getOpenFileName(self, "Выберите файл с данными облака", "", "Las Files (*.las);;PCD Files (*.pcd)", options=options)
+        self.file_path_POINTS, _ = QFileDialog.getOpenFileName(self, "Выберите файл с данными облака", "", "Point Cloud Files (*.las *.pcd)", options=options)
         if self.file_path_POINTS:
             self.file_path_label1.setText(self.file_path_POINTS)
             self.button1.setText("Файл с данными облака")
@@ -226,14 +225,14 @@ class WidgetGallery(QWidget):
 
     def open_file_dialog_SETTINGS(self):
         options = QFileDialog.Options()
-        self.file_path_SETTINGS, _ = QFileDialog.getOpenFileName(self, "Выберите файл настроек", "", "(*.yaml);;(*.yml)", options=options)
+        self.file_path_SETTINGS, _ = QFileDialog.getOpenFileName(self, "Выберите файл настроек", "", "YAML Files (*.yaml *.yml)", options=options)
         if self.file_path_SETTINGS:
             self.file_path_label0.setText(self.file_path_SETTINGS)
             self.button0.setText("Файл настроек")
 
     def open_file_dialog_TRAJ(self):
         options = QFileDialog.Options()
-        self.file_path_TRAJ, _ = QFileDialog.getOpenFileName(self, "Выберите файл с треком человека", "", "Las Files (*.las);;PCD Files (*.pcd)", options=options)
+        self.file_path_TRAJ, _ = QFileDialog.getOpenFileName(self, "Выберите файл с треком человека", "", "Point Cloud Files (*.las *.pcd)", options=options)
         if self.file_path_TRAJ:
             self.file_path_label2.setText(self.file_path_TRAJ)
             self.button2.setText("Файл с треком человека")
