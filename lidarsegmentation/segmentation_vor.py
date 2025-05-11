@@ -17,10 +17,8 @@ def makedirs_if_not_exist(path):
 def make_binding_file(pc_area, ss):
     path_csv = os.path.join(ss.path_base, ss.fname_points.split(".")[0] + "_binding.csv")
     df = pd.DataFrame({"Name_tree": [], "X": [], "Y": []})
-    i=0
     print("Make binding file ...")
-    for polygon in tqdm(pc_area.polygons):
-        i+=1
+    for i, polygon in enumerate(tqdm(pc_area.polygons)):
         pc_poly = pc_area.poly_cut(polygon, mode = 'main', returned = 'tree')
         if pc_poly.points.shape[0]>0:
             filename_out = str(i).rjust(4, '0') + '.pcd'
@@ -76,14 +74,19 @@ def segmentation_vor(ss: SS, make_binding: bool = True):
             offsetX, offsetY = 0,0
             old_uc = pc_poly.coordinate
             old_lc = pc_poly.coordinate
-            j = 0
 
             filename_out = f"tree_{i:04d}.pcd"
 
-            z_diff = pc_poly.points.max(axis=0)[2] - pc_poly.points.min(axis=0)[2]
+            z_min = pc_poly.points.min(axis=0)[2]
+            z_max = pc_poly.points.max(axis=0)[2]
+            z_diff = z_max - z_min
             n_z_steps = 2*int(z_diff//STEP)
+
+            # Create empty arrays to store results
+            result_points = np.empty((0, 3))
+            result_intensity = np.empty((0, ))
             for zc in tqdm(range(n_z_steps), desc='Z steps'):
-                idx = np.searchsorted(z_thresholds * pc_poly.points.max(axis=0)[2], min(LOW,pc_poly.points.max(axis=0)[2]), side='left')
+                idx = np.searchsorted(z_thresholds * z_max, min(LOW, z_max), side='left')
                 eps_step = eps_steps[idx]
                 min_pt = min_pts[idx]
     
@@ -98,13 +101,8 @@ def segmentation_vor(ss: SS, make_binding: bool = True):
                 HIGH = LOW + STEP
 
                 if pc_l_p.points.shape[0]>1:
-                    if j==0:
-                        result_points = np.copy(pc_l_p.points)
-                        result_intensity = np.copy(pc_l_p.intensity)
-                    else: 
-                        result_points = np.vstack((result_points, pc_l_p.points))
-                        result_intensity = np.hstack((result_intensity, pc_l_p.intensity))
-                    j += 1
+                    result_points = np.concatenate([result_points, pc_l_p.points], axis=0)
+                    result_intensity = np.concatenate([result_intensity, pc_l_p.intensity], axis=0)
 
             pc_result = PCD_TREE(points = result_points, intensity = result_intensity, coordinate = pc_poly.coordinate)
             pc_result.unique()
