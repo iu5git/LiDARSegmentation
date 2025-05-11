@@ -29,7 +29,7 @@ def make_binding_file(pc_area, ss):
     df.to_csv(path_csv, index=False, sep=';')
 
 
-def segmentation_vor(ss, make_binding = True):
+def segmentation_vor(ss: SS, make_binding: bool = True):
     path_file_save = os.path.join(ss.path_base, ss.step1_folder_name)
     makedirs_if_not_exist(path_file_save)
 
@@ -89,7 +89,7 @@ def segmentation_vor(ss, make_binding = True):
     
                 pc_l_p = pc_area.make_layer_polygon(polygon, offsetX, offsetY, pc_poly.coordinate, LOW, HIGH)
                 pc_l_p.lower_coordinate = [old_uc[0], old_uc[1], (old_lc[2]+old_uc[2])/2]
-                pc_l_p.process_layer(0.35+eps_step, min_pt, verbose=False)
+                pc_l_p.process_layer(0.35+eps_step, min_pt, cluster_max_size=ss.cluster_max_size, verbose=False)
                 old_lc = pc_l_p.lower_coordinate
                 old_uc = pc_l_p.upper_coordinate
                 offsetX, offsetY = pc_l_p.offset[0], pc_l_p.offset[1]

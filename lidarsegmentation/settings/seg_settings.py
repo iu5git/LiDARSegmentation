@@ -12,6 +12,7 @@ class SS():
         z_thresholds = None, 
         eps_steps = None, 
         min_pts = None,
+        cluster_max_size = None,
         **kwargs
     ):
         self.path_base = path_base
@@ -23,6 +24,7 @@ class SS():
         self.z_thresholds = z_thresholds
         self.eps_steps = eps_steps
         self.min_pts = min_pts
+        self.cluster_max_size = cluster_max_size
         self.step1_folder_name = 'vor'
         self.step2_folder_name = 'ram'
         self.step3_folder_name = 'clear'
