@@ -73,3 +73,7 @@ segmentation:
   # slenderness = высота (м) / диаметр (м)
   slenderness_min: 50
   slenderness_max: 150
+  # Действие при провале проверки slenderness
+  # "expand_closest" - расширить до ближайшей несегментированной области
+  # null - игнорировать
+  on_slenderness_fail: "expand_closest"

@@ -1,4 +1,5 @@
 import yaml
+from typing import Optional
 
 class SS():
     def __init__(
@@ -13,8 +14,9 @@ class SS():
         eps_steps = None, 
         min_pts = None,
         cluster_max_size = None,
-        slenderness_min = None,
-        slenderness_max = None,
+        slenderness_min: Optional[int] = None,
+        slenderness_max: Optional[int] = None,
+        on_slenderness_fail: Optional[str] = None,
         **kwargs
     ):
         self.path_base = path_base
@@ -29,6 +31,7 @@ class SS():
         self.cluster_max_size = cluster_max_size
         self.slenderness_min = slenderness_min
         self.slenderness_max = slenderness_max
+        self.on_slenderness_fail = on_slenderness_fail
         self.step1_folder_name = 'vor'
         self.step2_folder_name = 'ram'
         self.step3_folder_name = 'clear'
