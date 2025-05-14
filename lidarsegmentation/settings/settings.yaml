@@ -68,3 +68,8 @@ segmentation:
   eps_steps: [0.01, 0.15, 0.35, 0.5, 0.6, 0.7]
   # minPts алгоритма DBSCAN, которые дествуют при z_thresholds
   min_pts: [50, 50, 50, 50, 45, 40]
+  # Минимальное и максимальнoe значение slenderness дерева
+  # Может быть null, тогда проверка не выполняется
+  # slenderness = высота (м) / диаметр (м)
+  slenderness_min: 50
+  slenderness_max: 150

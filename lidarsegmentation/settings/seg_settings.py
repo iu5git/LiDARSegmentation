@@ -13,6 +13,8 @@ class SS():
         eps_steps = None, 
         min_pts = None,
         cluster_max_size = None,
+        slenderness_min = None,
+        slenderness_max = None,
         **kwargs
     ):
         self.path_base = path_base
@@ -25,6 +27,8 @@ class SS():
         self.eps_steps = eps_steps
         self.min_pts = min_pts
         self.cluster_max_size = cluster_max_size
+        self.slenderness_min = slenderness_min
+        self.slenderness_max = slenderness_max
         self.step1_folder_name = 'vor'
         self.step2_folder_name = 'ram'
         self.step3_folder_name = 'clear'

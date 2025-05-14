@@ -14,7 +14,7 @@ def makedirs_if_not_exist(path):
         os.makedirs(path)
 
 
-def make_binding_file(pc_area, ss):
+def make_binding_file(pc_area, ss) -> pd.DataFrame:
     path_csv = os.path.join(ss.path_base, ss.fname_points.split(".")[0] + "_binding.csv")
     df = pd.DataFrame({"Name_tree": [], "X": [], "Y": []})
     print("Make binding file ...")
@@ -25,6 +25,22 @@ def make_binding_file(pc_area, ss):
             filename_out = f"tree_{filename_out}"
             df = df.append({"Name_tree": filename_out, "X": pc_poly.coordinate[0], "Y": pc_poly.coordinate[1]}, ignore_index=True)
     df.to_csv(path_csv, index=False, sep=';')
+    return df
+
+
+def slenderness_check(tree: PCD_TREE, df: pd.DataFrame, filename: str, ss: SS) -> bool:
+    tree.estimate_height()
+    tree.search_main_coordinate(df, filename)
+    pc_slice = tree.search_slice()
+    pc_expsph = tree.search_points_for_center(pc_slice)
+    if pc_expsph.points.shape[0] > 10:
+        tree.estimate_diameter(pc_expsph, pc_slice)
+        # Slenderness = height (m) / (diameter (cm) * 1e-2)
+        slenderness = tree.height / (tree.diameter_LS * 1e-2)
+        return ss.slenderness_min <= slenderness <= ss.slenderness_max
+    else:
+        print(f"Tree {filename} has less than 10 points in the expanded slice to calculate diameter")
+        return False
 
 
 def segmentation_vor(ss: SS, make_binding: bool = True):
@@ -56,7 +72,11 @@ def segmentation_vor(ss: SS, make_binding: bool = True):
     pc_area.vor_regions(verbose=False)
     
     if make_binding:
-        make_binding_file(pc_area, ss)
+        df_binding = make_binding_file(pc_area, ss)
+
+    # Create _res.csv dataframe
+    df_coord = pd.read_csv(file_name_coord, sep = ';')
+    df = df_coord.merge(df_binding, on= ('X', 'Y'))
 
     print("Start polygons processing ...")
     regions = pc_area.polygons[ss.first_num:]
@@ -104,8 +124,17 @@ def segmentation_vor(ss: SS, make_binding: bool = True):
                     result_points = np.concatenate([result_points, pc_l_p.points], axis=0)
                     result_intensity = np.concatenate([result_intensity, pc_l_p.intensity], axis=0)
 
-            pc_result = PCD_TREE(points = result_points, intensity = result_intensity, coordinate = pc_poly.coordinate)
+            pc_result = PCD_TREE(points=result_points, intensity=result_intensity, coordinate=pc_poly.coordinate)
             pc_result.unique()
+
+            if ss.slenderness_min is not None and ss.slenderness_max is not None:
+                if slenderness_check(pc_result, df, filename_out, ss):
+                    print(f"Tree {filename_out} passed the slenderness check")
+                    print(f"Computed: h={pc_result.height:.2f}m, d={pc_result.diameter_LS:.2f}cm")
+                else:
+                    print(f"Tree {filename_out} failed the slenderness check")
+                    print(f"Computed: h={pc_result.height:.2f}m, d={pc_result.diameter_LS:.2f}cm")
+            
             file_name_data_out = os.path.join(path_file_save, filename_out) 
             pc_result.save(file_name_data_out)
 
