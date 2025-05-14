@@ -222,11 +222,15 @@ class PCD_TREE(PCD):
 
     def search_slice(self, intensity_cut = 0):
         pc_slice = PCD_TREE(points = self.points, intensity = self.intensity)
-        idx_labels=np.where((pc_slice.points[:,2] > pc_slice.points.min(axis=0)[2]) & (pc_slice.points[:,2] <= pc_slice.points.min(axis=0)[2] + 2))
+        slice_min = pc_slice.points.min(axis=0)[2]
+        # Filter points from lowest point to 2m above the lowest point
+        idx_labels = np.where((pc_slice.points[:, 2] > slice_min) & (pc_slice.points[:, 2] <= slice_min + 2))[0]
         pc_slice.index_cut(idx_labels)
+
         idx_labels = np.where(pc_slice.intensity >= intensity_cut)
         pc_slice.index_cut(idx_labels)
-        pc_slice.RGBint = pc_slice.intensity/max(pc_slice.intensity)
+
+        pc_slice.RGBint = pc_slice.intensity / max(pc_slice.intensity)
         return pc_slice
 
     def expansion_via_spheres(check, chosen, main_coordinate):
@@ -239,7 +243,14 @@ class PCD_TREE(PCD):
             dist = math.sqrt((point_main[0] - main_coordinate[0])**2 + (point_main[1] - main_coordinate[1])**2)
             if dist <= 0.3:
                 d = 0.1
-                idx_labels=np.where((check_points[:,0]>point_main[0]-d) & (check_points[:,0]<point_main[0]+d) & (check_points[:,1]>point_main[1]-d) & (check_points[:,1]<point_main[1]+d)& (check_points[:,2]>point_main[2]-d) & (check_points[:,2]<point_main[2]+d))
+                idx_labels=np.where(
+                    (check_points[:, 0] > point_main[0] - d) & \
+                    (check_points[:, 0] < point_main[0] + d) & \
+                    (check_points[:, 1] > point_main[1] - d) & \
+                    (check_points[:, 1] < point_main[1] + d) & \
+                    (check_points[:, 2] > point_main[2] - d) & \
+                    (check_points[:, 2] < point_main[2] + d)
+                )
                 ch_points = check_points[idx_labels]
                 ch_intensity = check_intensity[idx_labels]
                 if j == 0:
@@ -249,6 +260,7 @@ class PCD_TREE(PCD):
                     r_points = np.vstack((r_points, ch_points))
                     r_intensity = np.hstack((r_intensity, ch_intensity))
                 j += 1
+
         if r_points.shape[0]>1:
             r_points_set = list(set(tuple(x) for x in r_points.tolist()))
             r_points_set = np.asarray(r_points_set)
@@ -274,17 +286,27 @@ class PCD_TREE(PCD):
         XCH = np.asarray(CH)
 
         clustering = DBSCAN(eps=0.05, min_samples=100).fit(XCH)
-        labels=clustering.labels_
-        idx_labels=np.where(labels<0)
+        labels = clustering.labels_
+        idx_labels = np.where(labels < 0)[0]
 
-        pc_pfc = PCD_TREE(points = pc_slice.points, intensity = pc_slice.intensity)
+        pc_pfc = PCD_TREE(points=pc_slice.points, intensity=pc_slice.intensity)
         pc_pfc.index_cut(idx_labels)
 
-        idx_labels=np.where((pc_pfc.points[:,0]>self.main_coordinate[0]-dim) & (pc_pfc.points[:,0]<self.main_coordinate[0]+dim) & (pc_pfc.points[:,1]>self.main_coordinate[1]-dim) & (pc_pfc.points[:,1]<self.main_coordinate[1]+dim))
+        idx_labels=np.where(
+            (pc_pfc.points[:, 0] > self.main_coordinate[0] - dim) & \
+            (pc_pfc.points[:, 0] < self.main_coordinate[0] + dim) & \
+            (pc_pfc.points[:, 1] > self.main_coordinate[1] - dim) & \
+            (pc_pfc.points[:, 1] < self.main_coordinate[1] + dim)
+        )[0]
         pc_pfc.index_cut(idx_labels)
 
-        pc_chosen = PCD_TREE(points = self.points, intensity = self.intensity)
-        idx_labels=np.where((pc_chosen.points[:,0]>self.main_coordinate[0]-dim) & (pc_chosen.points[:,0]<self.main_coordinate[0]+dim) & (pc_chosen.points[:,1]>self.main_coordinate[1]-dim) & (pc_chosen.points[:,1]<self.main_coordinate[1]+dim))
+        pc_chosen = PCD_TREE(points=self.points, intensity=self.intensity)
+        idx_labels=np.where(
+            (pc_chosen.points[:, 0] > self.main_coordinate[0] - dim) & \
+            (pc_chosen.points[:, 0] < self.main_coordinate[0] + dim) & \
+            (pc_chosen.points[:, 1] > self.main_coordinate[1] - dim) & \
+            (pc_chosen.points[:, 1] < self.main_coordinate[1] + dim)
+        )[0]
         pc_chosen.index_cut(idx_labels)
 
         pc_expsph = PCD_TREE.expansion_via_spheres(pc_chosen, pc_pfc, self.main_coordinate)
