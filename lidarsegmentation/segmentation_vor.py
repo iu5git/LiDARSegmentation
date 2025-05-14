@@ -128,12 +128,15 @@ def segmentation_vor(ss: SS, make_binding: bool = True):
             pc_result.unique()
 
             if ss.slenderness_min is not None and ss.slenderness_max is not None:
-                if slenderness_check(pc_result, df, filename_out, ss):
-                    print(f"Tree {filename_out} passed the slenderness check")
-                    print(f"Computed: h={pc_result.height:.2f}m, d={pc_result.diameter_LS:.2f}cm")
-                else:
+                if not slenderness_check(pc_result, df, filename_out, ss):
                     print(f"Tree {filename_out} failed the slenderness check")
                     print(f"Computed: h={pc_result.height:.2f}m, d={pc_result.diameter_LS:.2f}cm")
+                    unsegmented_region_centers = np.array([r.mean(axis=0) for r in regions[i:]])
+                    closest_region_idx = np.argmin(np.linalg.norm(unsegmented_region_centers[0:1] - unsegmented_region_centers[1:], axis=1))
+                    regions[closest_region_idx] = PCD_UTILS.merge_polygons(regions[i], regions[closest_region_idx])
+                    print(f"Expanding tree {filename_out} to the closest region {closest_region_idx}")
+                    print(f"Skipping tree {filename_out}")
+                    continue
             
             file_name_data_out = os.path.join(path_file_save, filename_out) 
             pc_result.save(file_name_data_out)
