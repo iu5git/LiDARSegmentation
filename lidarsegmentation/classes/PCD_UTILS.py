@@ -59,20 +59,17 @@ class PCD_UTILS:
             print(f"Opening {file_path}")
             pprint.pprint(cloud.get_metadata())
         new_cloud_data = cloud.pc_data.view(np.float32).reshape(cloud.pc_data.shape + (-1,))
+
         if verbose:
             print(new_cloud_data)
             print(f"Shape: {new_cloud_data.shape}")
             end = time()-start
             print(f"Time opening: {end:.3f} s")
-        try:
-            ii = cloud.get_metadata()["fields"].index('Intensity')
-        except ValueError:
-            ii = None
-        try:
-            ir = cloud.get_metadata()["fields"].index('rgb')
-        except ValueError:
-            ir = None
-        ix = cloud.get_metadata()["fields"].index('x')
+
+        metadata = cloud.get_metadata()
+        ii = metadata["fields"].index('Intensity') if 'Intensity' in metadata["fields"] else None
+        ir = metadata["fields"].index('rgb') if 'rgb' in metadata["fields"] else None
+        ix = metadata["fields"].index('x')
         return new_cloud_data, ix, ii, ir 
     
     @staticmethod
