@@ -118,131 +118,130 @@ def coordinates(intensity_cut_make, cs):
 
 
 def extract_stumps(cs, intensity_cut_make, path_file_cells):
-    """Extract stumps from cell data and return coordinates and measurements."""
-    TD = []
-    TN = []
-    TCX = []
-    TCY = []
-
+    """Extract all stumps from segmented cells and return arrays of (name, x, y, diameter)."""
+    records = []
     path_file_stumps = os.path.join(path_file_cells, 'stumps')
     os.makedirs(path_file_stumps, exist_ok=True)
 
-    print('Starting stump extracting from areas (cells) ...')
+    for cell_file in os.listdir(path_file_cells):
+        if not cell_file.endswith('.pcd'):
+            continue
+        cell_path = os.path.join(path_file_cells, cell_file)
+        records.extend(process_cell(cell_path, cs, intensity_cut_make, path_file_stumps))
 
-    tfni = 0
-    for filename in tqdm(os.listdir(path_file_cells)):
-        if filename.endswith('.pcd'):
-            print(f'\n Extracting from {filename} cell ...')
-            if cs.cut_data_method == 'none':
-                path_cells = os.path.join(cs.path_base, cs.fname_points)
-            else:
-                path_cells = os.path.join(path_file_cells, filename)
+    if not records:
+        return np.array([]), np.array([]), np.array([]), np.array([])
+    names, xs, ys, ds = zip(*records)
+    return np.asarray(names), np.asarray(xs), np.asarray(ys), np.asarray(ds)
 
-            pc_cells = CELL()
-            pc_cells.open(path_cells)
 
-            labels_stumps = pc_cells.extract_stumps_labels()
+def process_cell(cell_path, cs, intensity_cut_make, path_file_stumps):
+    """Process a single cell PCD file and return a list of stump records."""
+    pc_cells = CELL()
+    pc_cells.open(cell_path)
+    labels = pc_cells.extract_stumps_labels()
+    recs = []
+    for lbl in np.unique(labels):
+        if lbl < 0:
+            continue
+        rec = process_single_stump(pc_cells, labels, lbl, cs, intensity_cut_make, path_file_stumps)
+        if rec:
+            recs.append(rec)
+    return recs
 
-            for i in tqdm(np.unique(labels_stumps)):
-                if i > -1:
-                    pc_stump = CELL(pc_cells.points, pc_cells.intensity)
-                    idx_label = np.where(labels_stumps == i)
-                    pc_stump.index_cut(idx_label)
 
-                    height = pc_stump.points.max(axis=0)[2] - pc_stump.points.min(axis=0)[2]
-                    if height >= cs.height_limit_1:
-                        pc_stump.points, pc_stump.intensity = PCD_UTILS.SOR(pc_stump.points, pc_stump.intensity)
+def process_single_stump(pc_cells, labels, lbl, cs, intensity_cut_make, path_file_stumps):
+    """Process one stump label and return (filename, x, y, diameter) or None."""
+    idx = np.where(labels == lbl)
+    pts = pc_cells.points[idx]
+    ints = pc_cells.intensity[idx]
+    # Filter by height_limit_1
+    if pts[:, 2].ptp() < cs.height_limit_1:
+        return None
+    # Denoise
+    pts, ints = PCD_UTILS.SOR(pts, ints)
+    # XY clustering
+    xy_labels = CELL(pts, ints).labels_XY_dbscan(eps=cs.eps_XY, max_points=cs.max_points_to_process_XY)
+    best = None
+    for xyl in np.unique(xy_labels):
+        if xyl < 0:
+            continue
+        rec = process_xy_cluster(pts, ints, xy_labels, xyl, cs, intensity_cut_make, path_file_stumps)
+        if rec and (best is None or rec[3] > best[3]):
+            best = rec
+    return best
 
-                        labels_XY = pc_stump.labels_XY_dbscan(eps=cs.eps_XY, max_points=cs.max_points_to_process_XY)
 
-                        for j in np.unique(labels_XY):
-                            if j > -1:
-                                pc_stump_clear = CELL(pc_stump.points, pc_stump.intensity)
-                                idx_label = np.where(labels_XY == j)
-                                pc_stump_clear.index_cut(idx_label)
+def process_xy_cluster(pts, ints, xy_labels, xyl, cs, intensity_cut_make, path_file_stumps):
+    """Process one XY sub-cluster, return stump or None."""
+    idx = np.where(xy_labels == xyl)
+    sub_pts, sub_ints = pts[idx], ints[idx]
+    if sub_pts[:, 2].ptp() < cs.height_limit_2:
+        return None
+    # Z clustering
+    z_labels = CELL(sub_pts, sub_ints).label_Z_dbscan(eps=cs.eps_Z)
+    # pick largest Z cluster
+    counts = {z: np.sum(z_labels == z) for z in np.unique(z_labels) if z >= 0}
+    if not counts:
+        return None
+    best_z = max(counts, key=counts.get)
+    idxz = np.where(z_labels == best_z)
+    pts_z, ints_z = sub_pts[idxz], sub_ints[idxz]
+    # Fit circles in layers
+    cx, cy, r = fit_circle_layers(pts_z, cs)
+    if r <= 0:
+        return None
+    # Quality check
+    cx, cy, r = quality_check(pts_z, cx, cy, r)
+    # Save stump PCD
+    pname = save_stump_pcd(pts_z, ints_z, intensity_cut_make, path_file_stumps)
+    return (pname, cx, cy, r * 2)
 
-                                height = pc_stump_clear.points.max(axis=0)[2] - pc_stump_clear.points.min(axis=0)[2]
-                                if height >= cs.height_limit_2:
-                                    labels_Z = pc_stump_clear.label_Z_dbscan(eps=cs.eps_Z)
 
-                                    max_shape = 0
-                                    i_max_shape = -1
-                                    for k in np.unique(labels_Z):
-                                        if k >= -1:
-                                            pc_stump_verifiable = PCD(pc_stump_clear.points, pc_stump_clear.intensity)
-                                            idx_label = np.where(labels_Z == k)
-                                            pc_stump_verifiable.index_cut(idx_label)
-                                            if pc_stump_verifiable.points.shape[0] > max_shape:
-                                                max_shape = pc_stump_verifiable.points.shape[0]
-                                                i_max_shape = k
+def fit_circle_layers(points, cs):
+    """Slice points into layers, fit circle on each, return median x, y, r."""
+    zmin, zmax = points[:, 2].min(), points[:, 2].max()
+    if zmax - zmin <= 1:
+        return 0, 0, 0
+    layers = 4
+    dz = (zmax - zmin) / layers
+    radii, centers = [], []
+    for i in range(layers):
+        slab = points[(points[:, 2] >= zmin + i * dz) & (points[:, 2] < zmin + (i + 1) * dz)]
+        try:
+            xc, yc, rad, _ = cf.hyper_fit(slab)
+        except Exception as e:
+            xc, yc, rad = 0, 0, 0
+        radii.append(rad)
+        centers.append((xc, yc))
+    xs = [c[0] for c in centers]
+    ys = [c[1] for c in centers]
+    return statistics.median(xs), statistics.median(ys), statistics.median(radii)
 
-                                    if i_max_shape != -1:
-                                        pc_stump_suitable = PCD(pc_stump_clear.points, pc_stump_clear.intensity)
-                                        idx_label = np.where(labels_Z == i_max_shape)
-                                        pc_stump_suitable.index_cut(idx_label)
 
-                                        r_list = []
-                                        xy_list = []
-                                        save_center = [0, 0, 0]
+def quality_check(points, cx, cy, r):
+    """Adjust r and center based on bounding box and medians."""
+    xmin, ymin = points[:, :2].min(axis=0)
+    xmax, ymax = points[:, :2].max(axis=0)
+    check_r = ((xmax - xmin) + (ymax - ymin)) / 4
+    if (r > 0.65 or r > 2.1 * check_r) or r == 0:
+        r = check_r
+    midx, midy = np.median(points[:, 0]), np.median(points[:, 1])
+    if math.hypot(cx - midx, cy - midy) > 0.25:
+        cx, cy = (midx, midy)
+    return cx, cy, r
 
-                                        x_min, y_min, z_min = pc_stump_suitable.points.min(axis=0)
-                                        x_max, y_max, z_max = pc_stump_suitable.points.max(axis=0)
-                                        if z_max - z_min > 1:
-                                            num_layers = 4
-                                            layer = (z_max - z_min) / num_layers
 
-                                            for l in range(num_layers):
-                                                pc_stump_suitable_layer = PCD(pc_stump_suitable.points, pc_stump_suitable.intensity)
-                                                idx_layer = np.where(
-                                                    (pc_stump_suitable_layer.points[:, 2] >= l * layer + z_min)
-                                                    & (pc_stump_suitable_layer.points[:, 2] < (l + 1) * layer + z_min)
-                                                )
-                                                pc_stump_suitable_layer.index_cut(idx_layer)
+def save_stump_pcd(points, intensity, intensity_cut_make, path_file_stumps):
+    """Save a stump PCD and return its filename."""
+    save_stump_pcd.counter += 1
+    fname = f'int{intensity_cut_make}_{str(save_stump_pcd.counter).rjust(4, "0")}.pcd'
+    pc = PCD(points, intensity)
+    pc.save(os.path.join(path_file_stumps, fname))
+    return fname
 
-                                                try:
-                                                    xc, yc, r, _ = cf.hyper_fit(pc_stump_suitable_layer.points)
-                                                except Exception as e:
-                                                    xc, yc, r, _ = 0, 0, 0, 0
-                                                r_list.append(r)
-                                                xy_list.append([xc, yc])
 
-                                            xy_list = np.asarray(xy_list)
-
-                                            r_median = statistics.median(r_list)
-                                            x_median = statistics.median(xy_list[:, 0])
-                                            y_median = statistics.median(xy_list[:, 1])
-                                            check_x = np.median(pc_stump_suitable.points[:, 0])
-                                            check_y = np.median(pc_stump_suitable.points[:, 1])
-
-                                            x_min, y_min, z_min = pc_stump_suitable.points.min(axis=0)
-                                            x_max, y_max, z_max = pc_stump_suitable.points.max(axis=0)
-                                            check_r_median = ((x_max - x_min) + (y_max - y_min)) / 4
-                                            if (r_median > 0.65) or (r_median > 2.1 * check_r_median) or (r_median == 0.0):
-                                                r_median = check_r_median
-
-                                            dist = math.sqrt((xy_list[0][0] - check_x) ** 2 + (xy_list[0][1] - check_y) ** 2)
-                                            if dist > 0.25:
-                                                dist = math.sqrt((x_median - check_x) ** 2 + (y_median - check_y) ** 2)
-                                                if dist > 0.25:
-                                                    save_center = [check_x, check_y, 1]
-                                                else:
-                                                    save_center = [x_median, y_median, 1]
-                                            else:
-                                                save_center = [xy_list[0][0], xy_list[0][1], 1]
-
-                                            tfni += 1
-                                            filename_stumps_out = 'int' + str(intensity_cut_make) + '_' + str(tfni).rjust(4, '0') + '.pcd'
-                                            fname_stumps_out = os.path.join(path_file_stumps, filename_stumps_out)
-                                            pc_stump_suitable.save(fname_stumps_out)
-
-                                            TN.append(filename_stumps_out)
-                                            TCX.append(save_center[0])
-                                            TCY.append(save_center[1])
-                                            TD.append(r_median * 2)
-            if cs.cut_data_method == 'none':
-                break
-
-    return np.asarray(TN), np.asarray(TCX), np.asarray(TCY), np.asarray(TD)
+save_stump_pcd.counter = 0
 
 
 if __name__ == '__main__':
