@@ -6,7 +6,7 @@ from pyntcloud import PyntCloud
 import os
 import pandas as pd
 from tqdm import tqdm
-from lidarsegmentation.settings import seg_settings as ss 
+from lidarsegmentation.settings.seg_settings import SS
 
 def farthest_point_sample(xyz, npoint):
     device = xyz.device
@@ -83,6 +83,43 @@ def predict_from_pcd(pcd_obj, model_name):
         
     return ans
 
+def predict_mem(clear_trees, model_name):
+    """
+    Predict tree/not_tree labels for PCD objects in memory
+    
+    Args:
+        clear_trees: Dictionary of PCD objects keyed by filename
+        model_name: Name of the model to use for prediction
+        
+    Returns:
+        DataFrame with tree names and predicted labels
+    """
+    names = []
+    labels = []
+    
+    for filename, pcd_obj in tqdm(clear_trees.items(), desc=f"Predicting with {model_name}"):
+        label = predict_from_pcd(pcd_obj, model_name)
+        names.append(filename)
+        labels.append(label)
+    
+    pred_df = pd.DataFrame({"Name_tree": names, "Label": labels})
+    return pred_df
+
+def predict(path_file, model_name):
+    """
+    Original file-based prediction function
+    """
+    names = []
+    labels = []
+    for filename in tqdm(os.listdir(path_file)):
+        if filename.endswith('.pcd'):
+            src = os.path.join(path_file,filename)
+            label = test(src, model_name)
+            names.append(filename)
+            labels.append(label)     
+    bd = pd.DataFrame({"Name_tree": names,"Label": labels})
+    bd.to_csv(os.path.join(path_file,'predict_' + model_name + '.csv'), index = False, sep=';')
+
 def test(src, model_name):
     """Original test function that loads a PCD file from disk"""
     model_path = 'predictmdl/checkpoints/'+ model_name +'/models/model.t7'
@@ -127,22 +164,24 @@ def test(src, model_name):
     except:
         ans = -1
     return ans
-    # return test_pred[0][0]
-
-def predict(path_file, model_name):
-    names = []
-    labels = []
-    for filename in tqdm(os.listdir(path_file)):
-        if filename.endswith('.pcd'):
-            src = os.path.join(path_file,filename)
-            label = test(src, model_name)
-            names.append(filename)
-            labels.append(label)     
-    bd = pd.DataFrame({"Name_tree": names,"Label": labels})
-    bd.to_csv(os.path.join(path_file,'predict_' + model_name + '.csv'), index = False, sep=';')
 
 if __name__ == '__main__':
-    model_name = 'int0000_7000-512-rlish-s4762'
-    test_path = os.path.join('lidarsegmentation', 'int0000_7000-512-rlish-s4762')
-    predict(test_path, model_name)     
+    from lidarsegmentation.segmentation_vor import segmentation_vor
+    from lidarsegmentation.segmentation_ram import segmentation_ram
+    from lidarsegmentation.segmentation_clear import segmentation_clear
+    
+    yml_path = "settings\settings.yaml"
+    ss = SS.from_yaml(yml_path)
+    model_name = 'cpl1-1024-rp-s1024-pn2'
+    
+    # In-memory pipeline
+    binding_df, vor_trees = segmentation_vor(ss, make_binding=True)
+    combined_df, ram_trees = segmentation_ram(ss, binding_df, vor_trees)
+    clear_trees = segmentation_clear(ss, combined_df, ram_trees)
+    pred_df = predict_mem(clear_trees, model_name)
+    
+    # Save final output
+    output_path = os.path.join(ss.path_base, 'predict_' + model_name + '.csv')
+    pred_df.to_csv(output_path, index=False, sep=';')
+    print(f"Saved predictions to {output_path}")     
     

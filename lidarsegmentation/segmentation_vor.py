@@ -14,17 +14,15 @@ def makedirs_if_not_exist(path):
         os.makedirs(path)
 
 
-def make_binding_file(pc_area, ss) -> pd.DataFrame:
-    path_csv = os.path.join(ss.path_base, ss.fname_points.split(".")[0] + "_binding.csv")
+def make_binding_dataframe(pc_area) -> pd.DataFrame:
     df = pd.DataFrame({"Name_tree": [], "X": [], "Y": []})
-    print("Make binding file ...")
+    print("Creating binding dataframe...")
     for i, polygon in enumerate(tqdm(pc_area.polygons)):
         pc_poly = pc_area.poly_cut(polygon, mode = 'main', returned = 'tree')
         if pc_poly.points.shape[0]>0:
             filename_out = str(i).rjust(4, '0') + '.pcd'
             filename_out = f"tree_{filename_out}"
             df = df.append({"Name_tree": filename_out, "X": pc_poly.coordinate[0], "Y": pc_poly.coordinate[1]}, ignore_index=True)
-    df.to_csv(path_csv, index=False, sep=';')
     return df
 
 
@@ -44,6 +42,18 @@ def slenderness_check(tree: PCD_TREE, df: pd.DataFrame, filename: str, ss: SS) -
 
 
 def segmentation_vor(ss: SS, make_binding: bool = True):
+    """
+    Process point cloud data using Voronoi tessellation and segment trees.
+    
+    Args:
+        ss: Segmentation settings
+        make_binding: Whether to create binding dataframe
+        
+    Returns:
+        Tuple containing:
+        - binding_df: DataFrame with tree names and coordinates
+        - vor_trees: Dictionary of PCD_TREE objects keyed by filename
+    """
     path_file_save = os.path.join(ss.path_base, ss.step1_folder_name)
     makedirs_if_not_exist(path_file_save)
 
@@ -54,14 +64,13 @@ def segmentation_vor(ss: SS, make_binding: bool = True):
     label = pd.read_csv(file_name_coord, sep = ';')
     coords = np.asarray(label[["X", "Y"]], dtype=np.float64)
 
-
     pc_area = PCD_AREA()
     pc_area.open(file_name_data, verbose = True)
     pc_area.unique()
     pc_area.coordinates = coords
-    try:
+    if file_shape is not None and os.path.exists(file_shape):
         shp_poly = PCD_UTILS.shp_open(file_shape)
-    except:
+    else:
         shp_poly = PCD_UTILS.shp_create(pc_area)
 
     pc_area.shp_ply = Polygon(shp_poly)
@@ -71,15 +80,18 @@ def segmentation_vor(ss: SS, make_binding: bool = True):
     # #
     pc_area.vor_regions(verbose=False)
     
+    binding_df = None
     if make_binding:
-        df_binding = make_binding_file(pc_area, ss)
+        binding_df = make_binding_dataframe(pc_area)
 
-    # Create _res.csv dataframe
+    # Create combined dataframe
     df_coord = pd.read_csv(file_name_coord, sep = ';')
-    df = df_coord.merge(df_binding, on= ('X', 'Y'))
-
-    print("Start polygons processing ...")
+    df = df_coord.merge(binding_df, on= ('X', 'Y')) if binding_df is not None else df_coord
+    
+    print("Start polygons processing...")
     regions = pc_area.polygons[ss.first_num:]
+    vor_trees = {}
+    
     for i, polygon in enumerate(tqdm(regions, total=len(regions), desc='Voronoi regions'), start=ss.first_num):
         pc_poly = pc_area.poly_cut(polygon, mode = 'main')
         if pc_poly.points.shape[0]>2:
@@ -139,10 +151,13 @@ def segmentation_vor(ss: SS, make_binding: bool = True):
                         print(f"Skipping tree {filename_out}")
                         continue
             
-            file_name_data_out = os.path.join(path_file_save, filename_out) 
-            pc_result.save(file_name_data_out)
+            # Store in memory instead of saving to disk
+            vor_trees[filename_out] = pc_result
+    
+    return binding_df, vor_trees
 
 if __name__ == "__main__" :
     yml_path = "settings\settings.yaml"
     ss = SS.from_yaml(yml_path)
-    segmentation_vor(ss, make_binding = False)
+    binding_df, vor_trees = segmentation_vor(ss, make_binding = True)
+    print(f"Processed {len(vor_trees)} trees in memory")

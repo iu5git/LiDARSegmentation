@@ -10,11 +10,21 @@ from lidarsegmentation.classes.PCD_UTILS import PCD_UTILS
 from lidarsegmentation.classes.PCD import PCD
 
 class RAM():
-    def __init__(self, path_file, coordinates, combined_dataframe, ram = None):
-        self.path_file = path_file
+    def __init__(self, coordinates, combined_dataframe, vor_trees=None, ram=None):
+        """
+        Initialize RAM object for tree clustering
+        
+        Args:
+            coordinates: Array of tree coordinates
+            combined_dataframe: DataFrame with tree info
+            vor_trees: Dictionary of PCD_TREE objects from segmentation_vor
+            ram: Optional RAM DataFrame to initialize with
+        """
+        self.vor_trees = vor_trees or {}
         self.coordinates = coordinates
         self.combined_dataframe = combined_dataframe
         self.ram = ram
+        self.ram_trees = {}
 
     def search_labels(pc_tree, cluster_labels):
         centers_labels = []
@@ -49,93 +59,102 @@ class RAM():
 
     def accumulating(self):
         myRAM_list = [[0,0,0,0,0]]
-        for fname in tqdm(os.listdir(self.path_file)):
-            if fname.endswith('.pcd'):
+        for fname, pc_tree in tqdm(self.vor_trees.items(), desc="Accumulating RAM"):
+            labels = RAM.clustering(pc_tree)
+            
+            centers_labels, l_points = RAM.search_labels(pc_tree, labels)
 
-                pc_tree = PCD_TREE()
-                pc_tree.open(os.path.join(self.path_file, fname))
+            centers_labels = np.asarray(centers_labels)
+            try:
+                main_cluster = np.argmin(np.array(l_points)[:,2])
+            except:
+                main_cluster = -1
 
-                labels = RAM.clustering(pc_tree)
-                
-                centers_labels, l_points = RAM.search_labels(pc_tree, labels)
-
-                centers_labels = np.asarray(centers_labels)
-                try:
-                    main_cluster = np.argmin(np.array(l_points)[:,2])
-                except:
-                    main_cluster = -1
-
-                if np.unique(labels).shape[0]>2:
-
-                    x_value, y_value = self.get_xy_from_df(fname)
-
-                    points_of_trees = self.coordinates[np.all(abs(self.coordinates - [x_value, y_value])<10, axis=1)]
-                    points_of_trees = np.delete(points_of_trees, np.all(abs(points_of_trees - [x_value, y_value])<0.0001, axis=1), axis=0)
-                    centers_labels = np.delete(centers_labels, main_cluster, axis = 0)
-                    distances = cdist(points_of_trees[:,0:2], centers_labels)
-                    labels_indices = np.argmin(distances, axis=0)
-
-                    XP = pd.DataFrame(pc_tree.points, columns = ['X','Y','Z'])
-                    XP['I'] = pc_tree.intensity
-                    XP = np.asarray(XP)
-
-                    ci = 0
-                    for c in np.unique(labels):
-                        if ((c != -1)&(c != main_cluster)):
-                            i_layer=np.where(labels==c)
-                            c_points = XP[i_layer]
-                            np_c_points = np.asarray(c_points)
-
-                            ids = self.get_idnames_from_df(points_of_trees[labels_indices][ci][0], points_of_trees[labels_indices][ci][1])
-
-                            labels_indices_list = np.arange(np_c_points.shape[0], dtype=int)
-                            labels_indices_list = np.full_like(labels_indices_list, ids[0])
-                            
-                            myRAM_l = [list(point) + [label] for point, label in zip(c_points, labels_indices_list)]
-                            myRAM_l = np.asarray(myRAM_l)
-                            myRAM_list = np.concatenate((myRAM_list, myRAM_l), axis=0)
-                            ci += 1
-
-        myRAM_list = np.delete(myRAM_list, 0, axis=0)
-        self.ram = pd.DataFrame(myRAM_list, columns=['X', 'Y', 'Z', 'I', 'L'])
-
-    def exploitation(self, path_file_save):
-        for fname in tqdm(os.listdir(self.path_file)):
-            if fname.endswith('.pcd'):
-
-                pc_tree = PCD_TREE()
-                pc_tree.open(os.path.join(self.path_file, fname))
-                
+            if np.unique(labels).shape[0]>2:
                 x_value, y_value = self.get_xy_from_df(fname)
 
-                ids = self.get_idnames_from_df(x_value, y_value)
-
-                data_from_ram = self.ram.loc[self.ram['L'] == ids[0]]
-                data_from_ram = np.asarray(data_from_ram)
-
-                labels = RAM.clustering(pc_tree)
+                points_of_trees = self.coordinates[np.all(abs(self.coordinates - [x_value, y_value])<10, axis=1)]
+                points_of_trees = np.delete(points_of_trees, np.all(abs(points_of_trees - [x_value, y_value])<0.0001, axis=1), axis=0)
+                centers_labels = np.delete(centers_labels, main_cluster, axis = 0)
+                distances = cdist(points_of_trees[:,0:2], centers_labels)
+                labels_indices = np.argmin(distances, axis=0)
 
                 XP = pd.DataFrame(pc_tree.points, columns = ['X','Y','Z'])
                 XP['I'] = pc_tree.intensity
                 XP = np.asarray(XP)
 
-                _, l_points = RAM.search_labels(pc_tree, labels)
+                ci = 0
+                for c in np.unique(labels):
+                    if ((c != -1)&(c != main_cluster)):
+                        i_layer=np.where(labels==c)
+                        c_points = XP[i_layer]
+                        np_c_points = np.asarray(c_points)
 
-                try:
-                    main_cluster = np.argmin(np.array(l_points)[:,2])
-                except:
-                    main_cluster = -1
+                        ids = self.get_idnames_from_df(points_of_trees[labels_indices][ci][0], points_of_trees[labels_indices][ci][1])
 
-                pc_result = PCD(points = pc_tree.points, intensity = pc_tree.intensity)
-                idx_l = np.where(labels==main_cluster)
-                pc_result.index_cut(idx_l)
-            
-                filename = f"{fname}"
-                if pc_result.points.shape[0]>100:
-                    if data_from_ram.shape[0]>0:
-                        data_from_ram = data_from_ram[:, :-1]
-                        pc_result.concatenate(data_from_ram)
-                    pc_result.save(os.path.join(path_file_save, filename))
+                        labels_indices_list = np.arange(np_c_points.shape[0], dtype=int)
+                        labels_indices_list = np.full_like(labels_indices_list, ids[0])
+                        
+                        myRAM_l = [list(point) + [label] for point, label in zip(c_points, labels_indices_list)]
+                        myRAM_l = np.asarray(myRAM_l)
+                        myRAM_list = np.concatenate((myRAM_list, myRAM_l), axis=0)
+                        ci += 1
+
+        myRAM_list = np.delete(myRAM_list, 0, axis=0)
+        self.ram = pd.DataFrame(myRAM_list, columns=['X', 'Y', 'Z', 'I', 'L'])
+
+    def exploitation(self):
+        """
+        Process tree data using RAM in memory. Creates a dictionary of processed PCDs.
+        
+        Returns:
+            Dictionary of processed PCDs keyed by filename
+        """
+        for fname, pc_tree in tqdm(self.vor_trees.items(), desc="Exploiting RAM"):
+            x_value, y_value = self.get_xy_from_df(fname)
+
+            ids = self.get_idnames_from_df(x_value, y_value)
+
+            data_from_ram = self.ram.loc[self.ram['L'] == ids[0]]
+            data_from_ram = np.asarray(data_from_ram)
+
+            labels = RAM.clustering(pc_tree)
+
+            XP = pd.DataFrame(pc_tree.points, columns = ['X','Y','Z'])
+            XP['I'] = pc_tree.intensity
+            XP = np.asarray(XP)
+
+            l_points = []
+            for i in np.unique(labels):
+                if i>-1:
+                    idx_layer=np.where(labels==i)
+                    i_data = pc_tree.points[idx_layer]
+                    highest_point = i_data[np.argmax(i_data[:,2])]
+                    lowest_point = i_data[np.argmin(i_data[:,2])]
+                    l_points.append(lowest_point)
+
+            try:
+                main_cluster = np.argmin(np.array(l_points)[:,2])
+            except:
+                continue
+
+            idx_l = np.where(labels==main_cluster)
+            cur_points = pc_tree.points[idx_l]
+            cur_points_intensity = pc_tree.intensity[idx_l]
+
+            cur_points = np.asarray(cur_points)
+            cur_points_intensity = np.asarray(cur_points_intensity)
+        
+            if cur_points.shape[0]>100:
+                dt = np.c_[cur_points, cur_points_intensity]
+                if data_from_ram.shape[0]>0:
+                    data_from_ram = data_from_ram[:, :-1]
+                    dt = np.concatenate((dt, data_from_ram), axis=0)
+                dt = np.array(dt, dtype=np.float32)
+                pc_out = PCD(points = dt[:,0:3], intensity = dt[:,3])
+                self.ram_trees[fname] = pc_out
+                
+        return self.ram_trees
 
 
 

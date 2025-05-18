@@ -18,8 +18,8 @@ from lidarsegmentation.segmentation_ram import segmentation_ram
 from lidarsegmentation.segmentation_clear import segmentation_clear
 # from seg_after import seg_after
 # from orbit_gif import orbit_gif
-from lidarsegmentation.predict import predict
-from lidarsegmentation.parameters import parameters
+from lidarsegmentation.predict import predict_mem
+from lidarsegmentation.parameters import parameters_mem
 
 
 def str_to_bool(s: str) -> bool:
@@ -589,25 +589,55 @@ class WidgetGallery(QWidget):
             final_df.to_csv(save_pth, index=False, sep=';')
             self.textEdit.appendPlainText(f"Saved merged coordinates to {save_pth}")
 
-        # Original segmentation pipeline (unchanged)
+        # In-memory segmentation pipeline
+        binding_df = None
+        vor_trees = {}
+        combined_df = None
+        ram_trees = {}
+        clear_trees = {}
+        pred_df = None
+        params_df = None
+        model_name = 'cpl1-1024-rp-s1024-pn2'
+        
+        # Only execute each step if the corresponding checkbox is checked
         if self.checkBoxS1.isChecked():
-            segmentation_vor(ss, make_binding = True)
-            self.textEdit.appendPlainText("Done processing Segmentation Voronoi")
-        if self.checkBoxS2.isChecked():
-            segmentation_ram(ss)
-            self.textEdit.appendPlainText("Done processing Segmentation RAM")
-        if self.checkBoxS3.isChecked():
-            segmentation_clear(ss)
-            self.textEdit.appendPlainText("Done processing Segmentation Clear")
-        if self.checkBoxS4.isChecked():
-            model_name = 'cpl1-1024-rp-s1024-pn2'
-            path_file = os.path.join(ss.path_base, ss.step1_folder_name, ss.step2_folder_name, ss.step3_folder_name)
-            predict(path_file, model_name)
-            self.textEdit.appendPlainText("Done processing Predict Labels")
-        if self.checkBoxS5.isChecked():
-            path_file = os.path.join(ss.path_base, ss.step1_folder_name, ss.step2_folder_name, ss.step3_folder_name)
-            parameters(ss, path_file)
-            self.textEdit.appendPlainText("Done processing Estimate Parameters")
+            binding_df, vor_trees = segmentation_vor(ss, make_binding=True)
+            self.textEdit.appendPlainText(f"Done processing Segmentation Voronoi ({len(vor_trees)} trees)")
+        
+        if self.checkBoxS2.isChecked() and binding_df is not None and vor_trees:
+            combined_df, ram_trees = segmentation_ram(ss, binding_df, vor_trees)
+            self.textEdit.appendPlainText(f"Done processing Segmentation RAM ({len(ram_trees)} trees)")
+        
+        if self.checkBoxS3.isChecked() and combined_df is not None and ram_trees:
+            clear_trees = segmentation_clear(ss, combined_df, ram_trees)
+            self.textEdit.appendPlainText(f"Done processing Segmentation Clear ({len(clear_trees)} trees)")
+            
+            # Save final PCD files if needed
+            save_path = os.path.join(ss.path_base, ss.step1_folder_name, ss.step2_folder_name, ss.step3_folder_name)
+            if not os.path.exists(save_path):
+                os.makedirs(save_path)
+            for fname, pcd_obj in clear_trees.items():
+                pcd_obj.save(os.path.join(save_path, fname))
+        
+        if self.checkBoxS4.isChecked() and clear_trees:
+            pred_df = predict_mem(clear_trees, model_name)
+            # Save prediction results
+            pred_path = os.path.join(ss.path_base, ss.step1_folder_name, ss.step2_folder_name, 
+                                     ss.step3_folder_name, 'predict_' + model_name + '.csv')
+            pred_df.to_csv(pred_path, index=False, sep=';')
+            self.textEdit.appendPlainText(f"Done processing Predict Labels (saved to {pred_path})")
+        
+        if self.checkBoxS5.isChecked() and combined_df is not None and clear_trees:
+            try:
+                params_df = parameters_mem(ss, combined_df, clear_trees)
+                # Save parameters
+                param_name = ss.fname_points.partition('.')[0] + "_Parameters.csv"
+                param_path = os.path.join(ss.path_base, param_name)
+                params_df.to_csv(param_path, index=False, sep=';')
+                self.textEdit.appendPlainText(f"Done processing Estimate Parameters (saved to {param_path})")
+            except Exception as e:
+                self.textEdit.appendPlainText(f"Error estimating parameters: {e}")
+                self.textEdit.appendPlainText("Please check the log for details")
         
         self.textEdit.appendPlainText("All steps done")
 

@@ -5,42 +5,43 @@ from lidarsegmentation.settings.seg_settings import SS
 from lidarsegmentation.classes.RAM import RAM
 import numpy as np
 
-def makedirs_if_not_exist(path):
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-def segmentation_ram(ss):
-
-    path_file_save = os.path.join(ss.path_base, ss.step1_folder_name, ss.step2_folder_name)
-    makedirs_if_not_exist(path_file_save)
-
+def segmentation_ram(ss, binding_df, vor_trees):
+    """
+    Process segmented trees using RAM clustering
+    
+    Args:
+        ss: Segmentation settings
+        binding_df: DataFrame with tree names and coordinates from segmentation_vor
+        vor_trees: Dictionary of PCD_TREE objects from segmentation_vor
+        
+    Returns:
+        Tuple containing:
+        - combined_df: Combined DataFrame with tree info
+        - ram_trees: Dictionary of processed PCD objects
+    """
     file_name_coord = os.path.join(ss.path_base, ss.csv_name_coord)
-    path_file = os.path.join(ss.path_base, ss.step1_folder_name)
+    df_coord = pd.read_csv(file_name_coord, sep = ';')
 
-    label = pd.read_csv(file_name_coord, sep = ';')
-    coords = np.asarray(label[["X", "Y"]], dtype=np.float64)
-
-    path_csv = os.path.join(ss.path_base, ss.fname_points.split(".")[0] + "_binding.csv")
-    df1 = pd.read_csv(path_csv, sep = ';')
-
-    file_name_coord = os.path.join(ss.path_base, ss.csv_name_coord)
-    df2 = pd.read_csv(file_name_coord, sep = ';')
-
-    combined_dataframe = df2.merge(df1, on= ('X', 'Y'))
-    combined_dataframe.to_csv(os.path.join(ss.path_base, ss.fname_points.split(".")[0] + "_res.csv"), index = False, sep=';') 
-
+    # Create combined dataframe in memory
+    combined_df = df_coord.merge(binding_df, on=('X', 'Y'))
+    coords = np.asarray(combined_df[["X", "Y"]], dtype=np.float64)
+    
     print("First step clustering (accumulating RAM)...")
-
-    obj_ram = RAM(path_file = path_file, coordinates = coords, combined_dataframe = combined_dataframe)
+    obj_ram = RAM(coordinates=coords, combined_dataframe=combined_df, vor_trees=vor_trees)
     obj_ram.accumulating()
 
     print("Second step clustering (using RAM)...")
-    obj_ram.exploitation(path_file_save)
+    ram_trees = obj_ram.exploitation()
+    
+    return combined_df, ram_trees
 
 if __name__ == "__main__" :
+    from lidarsegmentation.segmentation_vor import segmentation_vor
     yml_path = "settings\settings.yaml"
     ss = SS.from_yaml(yml_path)
-    segmentation_ram(ss)
+    binding_df, vor_trees = segmentation_vor(ss, make_binding=True)
+    combined_df, ram_trees = segmentation_ram(ss, binding_df, vor_trees)
+    print(f"Processed {len(ram_trees)} trees in RAM stage")
 
 
 
