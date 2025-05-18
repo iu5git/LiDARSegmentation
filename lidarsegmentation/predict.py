@@ -2,7 +2,6 @@ import torch
 import numpy as np
 from lidarsegmentation.predictmdl.models.pointnet2_cls_ssg import get_model
 import lidarsegmentation.predictmdl.utils.pointcloud_utils as pcu
-from pyntcloud import PyntCloud
 import os
 import pandas as pd
 from tqdm import tqdm
@@ -83,7 +82,7 @@ def predict_from_pcd(pcd_obj, model_name):
         
     return ans
 
-def predict_mem(clear_trees, model_name):
+def predict(clear_trees, model_name):
     """
     Predict tree/not_tree labels for PCD objects in memory
     
@@ -105,65 +104,6 @@ def predict_mem(clear_trees, model_name):
     pred_df = pd.DataFrame({"Name_tree": names, "Label": labels})
     return pred_df
 
-def predict(path_file, model_name):
-    """
-    Original file-based prediction function
-    """
-    names = []
-    labels = []
-    for filename in tqdm(os.listdir(path_file)):
-        if filename.endswith('.pcd'):
-            src = os.path.join(path_file,filename)
-            label = test(src, model_name)
-            names.append(filename)
-            labels.append(label)     
-    bd = pd.DataFrame({"Name_tree": names,"Label": labels})
-    bd.to_csv(os.path.join(path_file,'predict_' + model_name + '.csv'), index = False, sep=';')
-
-def test(src, model_name):
-    """Original test function that loads a PCD file from disk"""
-    model_path = 'predictmdl/checkpoints/'+ model_name +'/models/model.t7'
-
-    species_names = ['Tree','Not_Tree']
-    # species_names = ['E','C','B','R','D','OC']
-    # species_names = ['E','C','B']
-    try:
-        pc = PyntCloud.from_file(src)
-        points = pc.points.loc[:,["x","y","z"]].values
-        points = np.array([points])
-
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        points = torch.Tensor(points).to(device)
-        centroids = farthest_point_sample(points, 2048)
-        pc_sampled = points[0][centroids[0]]
-        pc_sampled = pc_sampled.cpu().detach().numpy()
-
-        X_test = np.array([pc_sampled])
-        y_test = [0]
-
-        X_test = pcu.tree_normalize(X_test)
-        int2name = { i:name for i, name in enumerate(species_names)}
-
-        NUM_CLASSES = len(int2name)
-
-        model = get_model(NUM_CLASSES,normal_channel=False).to(device)
-        model.load_state_dict(torch.load(model_path))
-        model = model.eval()
-        test_true = []
-        test_pred = []
-        data, label = torch.tensor(X_test, device=device), torch.tensor(y_test, device=device)
-        data = data.permute(0, 2, 1)
-        logits, trans_feat = model(data)
-        preds = logits.max(dim=1)[1].detach()
-        test_true.append(label.cpu().numpy())
-        test_pred.append(preds.cpu().numpy())
-        if test_pred[0][0] == 1:
-            ans = 0 #"Это не дерево"
-        else:
-            ans = 1 #"Это дерево"
-    except:
-        ans = -1
-    return ans
 
 if __name__ == '__main__':
     from lidarsegmentation.segmentation_vor import segmentation_vor
@@ -178,7 +118,7 @@ if __name__ == '__main__':
     binding_df, vor_trees = segmentation_vor(ss, make_binding=True)
     combined_df, ram_trees = segmentation_ram(ss, binding_df, vor_trees)
     clear_trees = segmentation_clear(ss, combined_df, ram_trees)
-    pred_df = predict_mem(clear_trees, model_name)
+    pred_df = predict(clear_trees, model_name)
     
     # Save final output
     output_path = os.path.join(ss.path_base, 'predict_' + model_name + '.csv')
