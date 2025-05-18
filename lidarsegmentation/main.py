@@ -11,6 +11,7 @@ from lidarsegmentation.coordinates import coordinates
 from lidarsegmentation.merge_coordinates import merge_coordinates
 from lidarsegmentation.clear_excess_stumps import clear_excess_stumps
 import ast
+import pandas as pd
 
 from lidarsegmentation.segmentation_vor import segmentation_vor
 from lidarsegmentation.segmentation_ram import segmentation_ram
@@ -538,23 +539,57 @@ class WidgetGallery(QWidget):
             )
 
         print(f'main.py {cs.FLAG_make_cells}')
-
+        
+        # In-memory coordinate extraction pipeline
+        dfs = []
+        pcd_maps = {}
+        
         if self.checkBoxC1.isChecked():
-            coordinates(7000, cs)
+            df_7000, pcd_map_7000 = coordinates(7000, cs)
+            dfs.append(df_7000)
+            pcd_maps.update(pcd_map_7000)
             self.textEdit.appendPlainText("Done processing Coordinates(int = 7000)")
+            
         if self.checkBoxC2.isChecked():
-            coordinates(5000, cs)
+            df_5000, pcd_map_5000 = coordinates(5000, cs)
+            dfs.append(df_5000)
+            pcd_maps.update(pcd_map_5000)
             self.textEdit.appendPlainText("Done processing Coordinates(int = 5000)")
+            
         if self.checkBoxC3.isChecked():
-            coordinates(1000, cs)
+            df_1000, pcd_map_1000 = coordinates(1000, cs)
+            dfs.append(df_1000)
+            pcd_maps.update(pcd_map_1000)
             self.textEdit.appendPlainText("Done processing Coordinates(int = 1000)")
-        if self.checkBoxC4.isChecked():
-            merge_coordinates(cs)
+            
+        # In-memory merge coordinates
+        merged_df = pd.DataFrame()
+        if self.checkBoxC4.isChecked() and dfs:
+            merged_df = merge_coordinates(cs, dfs)
             self.textEdit.appendPlainText("Done processing Merge Coordinates")
-        if self.checkBoxC5.isChecked():
-            clear_excess_stumps(cs)
+        elif dfs:
+            # If not merging, just use the last DataFrame
+            merged_df = pd.concat(dfs, axis=1)
+            
+        # In-memory clear excess stumps
+        final_df = pd.DataFrame()
+        if self.checkBoxC5.isChecked() and not merged_df.empty:
+            final_df = clear_excess_stumps(cs, merged_df, pcd_maps)
+            # Write the single output file
+            save_pth = cs.fname_points.partition('.')[0] + "_Clear_Excess.csv"
+            save_pth = os.path.join(cs.path_base, save_pth)
+            final_df.to_csv(save_pth, index=False, sep=';')
             self.textEdit.appendPlainText("Done processing Clear Excess Stumps")
+            self.textEdit.appendPlainText(f"Saved final coordinates to {save_pth}")
+        elif not merged_df.empty:
+            final_df = merged_df
+            # Write the merged file if clear_excess was not run
+            save_pth = cs.fname_points.partition('.')[0] + "_Coordinates_Merged.csv"
+            save_pth = os.path.join(cs.path_base, save_pth)
+            final_df.to_csv(save_pth, index=False, sep=';')
+            self.textEdit.appendPlainText(f"Saved merged coordinates to {save_pth}")
 
+        # Original segmentation pipeline (unchanged)
         if self.checkBoxS1.isChecked():
             segmentation_vor(ss, make_binding = True)
             self.textEdit.appendPlainText("Done processing Segmentation Voronoi")

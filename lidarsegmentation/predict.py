@@ -24,9 +24,67 @@ def farthest_point_sample(xyz, npoint):
         farthest = torch.max(distance, -1)[1]
     return centroids
 
+def predict_from_pcd(pcd_obj, model_name):
+    """
+    Predict tree/not_tree label directly from a PCD object in memory.
+    
+    Args:
+        pcd_obj: PCD object with points and intensity
+        model_name: Name of the model to use for prediction
+        
+    Returns:
+        Label (1: tree, 0: not_tree, -1: error)
+    """
+    model_path = os.path.join('lidarsegmentation', 'predictmdl', 'checkpoints', model_name, 'models', 'model.t7')
+    
+    species_names = ['Tree', 'Not_Tree']
+    
+    try:
+        # Extract points from PCD object
+        points = pcd_obj.points
+        points = np.array([points])
+        
+        # Force CPU usage to avoid CUDA errors
+        # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cpu')
+        points = torch.Tensor(points).to(device)
+        centroids = farthest_point_sample(points, 2048)
+        pc_sampled = points[0][centroids[0]]
+        pc_sampled = pc_sampled.cpu().detach().numpy()
+        
+        X_test = np.array([pc_sampled])
+        y_test = [0]
+        
+        X_test = pcu.tree_normalize(X_test)
+        int2name = {i: name for i, name in enumerate(species_names)}
+        
+        NUM_CLASSES = len(int2name)
+        
+        model = get_model(NUM_CLASSES, normal_channel=False).to(device)
+        # Load model with map_location to ensure it loads on CPU regardless of where it was saved
+        model.load_state_dict(torch.load(model_path, map_location=device))
+        model = model.eval()
+        test_true = []
+        test_pred = []
+        data, label = torch.tensor(X_test, device=device), torch.tensor(y_test, device=device)
+        data = data.permute(0, 2, 1)
+        logits, trans_feat = model(data)
+        preds = logits.max(dim=1)[1].detach()
+        test_true.append(label.cpu().numpy())
+        test_pred.append(preds.cpu().numpy())
+        
+        if test_pred[0][0] == 1:
+            ans = 0  # "Not a tree"
+        else:
+            ans = 1  # "Tree"
+    except Exception as e:
+        print(f"Error in predict_from_pcd: {e}")
+        ans = -1
+        
+    return ans
 
 def test(src, model_name):
-
+    """Original test function that loads a PCD file from disk"""
     model_path = 'predictmdl/checkpoints/'+ model_name +'/models/model.t7'
 
     species_names = ['Tree','Not_Tree']
@@ -85,6 +143,6 @@ def predict(path_file, model_name):
 
 if __name__ == '__main__':
     model_name = 'int0000_7000-512-rlish-s4762'
-    path_file = os.path.join(path_file, 'int0000_7000-512-rlish-s4762')
-    predict(path_file, model_name)     
+    test_path = os.path.join('lidarsegmentation', 'int0000_7000-512-rlish-s4762')
+    predict(test_path, model_name)     
     
