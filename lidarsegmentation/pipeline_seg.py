@@ -4,7 +4,7 @@ from lidarsegmentation.segmentation_ram import segmentation_ram
 from lidarsegmentation.segmentation_clear import segmentation_clear
 from lidarsegmentation.seg_after import seg_after
 from lidarsegmentation.orbit_gif import orbit_gif
-from lidarsegmentation.predict import predict_mem
+from lidarsegmentation.predict import predict
 from lidarsegmentation.parameters import parameters
 from lidarsegmentation.settings.seg_settings import SS
 
@@ -49,7 +49,7 @@ def run_pipeline(ss, model_name='cpl1-1024-rp-s1024-pn2', save_final_pcds=True):
         print(f"Saved final PCD files to {save_path}")
         
     print("Running predictions...")
-    pred_df = predict_mem(clear_trees, model_name)
+    pred_df = predict(clear_trees, model_name)
     pred_path = os.path.join(ss.path_base, 'predict_' + model_name + '.csv')
     pred_df.to_csv(pred_path, index=False, sep=';')
     print(f"Saved predictions to {pred_path}")

@@ -2,7 +2,6 @@ import numpy as np
 from lidarsegmentation.classes.PCD import PCD
 import pyvista
 import sys
-import os 
 from tqdm import tqdm
 import pandas as pd
 import hdbscan
@@ -38,7 +37,7 @@ class CELL(PCD):
                 self.list_cell.append([i,j,0])
             j = min[1]
 
-        if verbose == True:
+        if verbose:
             p = pyvista.Plotter(window_size=[1000, 1000])
             pdata = pyvista.PolyData(np.asarray(self.list_cell))
             p.add_mesh(pdata, color='#FF0000')
@@ -84,83 +83,7 @@ class CELL(PCD):
         return list_for_consideration, cur_i_list_cell
 
     
-    def save_all_cells(self, path_file_save, verbose = None):              
-        np_list_cell = np.asarray(self.list_cell)
-        all_shape = np_list_cell.shape[0]
-
-        big_cell_i = 0
-        
-        with tqdm(total=all_shape) as pbar:
-            while np_list_cell.shape[0]>0:
-                cur_i_list_cell = 0
-                x_begin = np_list_cell[0][0]
-                y_begin = np_list_cell[0][1]
-
-                self.big_cell_points = np.array([[0,0,0]])
-                self.big_cell_intensity = np.array([0])
-                list_for_consideration = []
-                list_for_consideration.append([x_begin, y_begin])
-
-                idx_labels=np.where((self.points[:,0]>x_begin-self.cell_size) & (self.points[:,0]<x_begin+self.cell_size) & (self.points[:,1]>y_begin-self.cell_size) & (self.points[:,1]<y_begin+self.cell_size))
-                cell_points = self.points[idx_labels]
-                cell_intensity = self.intensity[idx_labels]
-                if [x_begin,y_begin,0] in self.list_cell: 
-                    self.list_cell[self.list_cell.index([x_begin,y_begin,0])][2] = 1
-                cur_i_list_cell += 1
-
-                idx_labels=np.where((self.points_traj[:,0]>x_begin-self.cell_size) & (self.points_traj[:,0]<x_begin+self.cell_size) & (self.points_traj[:,1]>y_begin-self.cell_size) & (self.points_traj[:,1]<y_begin+self.cell_size))
-                check_points = self.points_traj[idx_labels]
-                if check_points.shape[0]==0:
-                    self.big_cell_points = np.vstack((self.big_cell_points, cell_points))
-                    self.big_cell_intensity = np.hstack((self.big_cell_intensity, cell_intensity))
-
-                    while len(list_for_consideration)>0:
-                        list_for_consideration, cur_i_list_cell = self.micro_cell(list_for_consideration, cur_i_list_cell, 'right')
-                        list_for_consideration, cur_i_list_cell = self.micro_cell(list_for_consideration, cur_i_list_cell, 'left')
-                        list_for_consideration, cur_i_list_cell = self.micro_cell(list_for_consideration, cur_i_list_cell, 'up')
-                        list_for_consideration, cur_i_list_cell = self.micro_cell(list_for_consideration, cur_i_list_cell, 'down')
-                        list_for_consideration.pop(0)
-
-                        np_list_cell_reserv = np.asarray(self.list_cell)
-                        idx_labels=np.where(np_list_cell_reserv[:,2]==1)
-                        part_list = np_list_cell_reserv[idx_labels]
-                        # loading(part_list.shape[0],all_shape)
-                        pbar.update(1)
-
-                    self.big_cell_points = np.delete(self.big_cell_points, 0, axis = 0)
-                    self.big_cell_intensity = np.delete(self.big_cell_intensity, 0, axis = 0)
-                        
-                    if verbose == True:
-
-                        np_list_cell_show = np.asarray(self.list_cell)
-                        idx_labels=np.where(np_list_cell_show[:,2]==1)
-                        np_list_cell_show = np_list_cell_show[idx_labels]
-
-                        if self.big_cell_points.shape[0]>0:
-                            p1 = pyvista.Plotter(window_size=[1000, 1000])
-                            pdata = pyvista.PolyData(self.big_cell_points)
-                            p1.add_mesh(pdata)
-                            pdata = pyvista.PolyData(np_list_cell_show)
-                            p1.add_mesh(pdata, color='#FF0000')
-                            pdata = pyvista.PolyData(self.points_traj)
-                            p1.add_mesh(pdata, color='#0000FF')
-                            p1.show()
-                
-                    idx_labels=np.where(np_list_cell_reserv[:,2]==0)
-                    np_list_cell = np_list_cell_reserv[idx_labels]
-
-                if cur_i_list_cell<=1:
-                    np_list_cell = np.delete(np_list_cell, 0, axis = 0)
-                
-                if self.big_cell_points.shape[0]>10:
-                    big_cell_i += 1
-                    filename_out = str(big_cell_i).rjust(3, '0') + '.pcd'
-                    file_name_data_out = os.path.join(path_file_save, filename_out) 
-
-                    pc_result = PCD(points = self.big_cell_points, intensity = self.big_cell_intensity)
-                    pc_result.save(file_name_data_out)
-
-    def save_all_cells_memory(self, verbose=None):
+    def save_all_cells(self, verbose=None):
         """
         Process cells and return them in memory instead of saving to disk.
         Similar to save_all_cells but returns dict of cell_id -> PCD object.
@@ -222,13 +145,12 @@ class CELL(PCD):
 
                         np_list_cell_reserv = np.asarray(self.list_cell)
                         idx_labels = np.where(np_list_cell_reserv[:,2] == 1)
-                        part_list = np_list_cell_reserv[idx_labels]
                         pbar.update(1)
 
                     self.big_cell_points = np.delete(self.big_cell_points, 0, axis=0)
                     self.big_cell_intensity = np.delete(self.big_cell_intensity, 0, axis=0)
                         
-                    if verbose == True:
+                    if verbose:
                         np_list_cell_show = np.asarray(self.list_cell)
                         idx_labels = np.where(np_list_cell_show[:,2] == 1)
                         np_list_cell_show = np_list_cell_show[idx_labels]

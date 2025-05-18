@@ -85,12 +85,12 @@ def coordinates(intensity_cut_make, cs):
                 intensity_cut=cs.intensity_cut_vor_tes,
             )
             # Instead of writing to disk, store the regions in memory
-            cells_dict = vortes.select_clusters_memory(shp_poly)
+            cells_dict = vortes.select_clusters(shp_poly)
         elif cs.cut_data_method == 'flood_fill':
             cell = CELL(points=pc_area.points, intensity=pc_area.intensity, points_traj=pc_traj.points, cell_size=cs.cell_size)
             cell.make_cell_list(pc_area.points.min(axis=0), pc_area.points.max(axis=0), verbose=True)
             # Instead of writing to disk, store cells in memory
-            cells_dict = cell.save_all_cells_memory()
+            cells_dict = cell.save_all_cells()
         elif cs.cut_data_method == 'none':
             # No cells to process
             pass

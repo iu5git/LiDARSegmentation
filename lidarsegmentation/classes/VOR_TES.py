@@ -56,34 +56,6 @@ class VOR_TES(PCD):
         plt.show()
 
 
-    def select_clusters(self, path_folder):
-        print(f'Starting saving voronoi tessellation cells ...')
-        i = 0
-        n_folder_file = len(os.listdir(path_folder))
-        pc = PCD_AREA(points = self.points, intensity = self.intensity)
-        for filename in tqdm(os.listdir(path_folder)):
-            if filename.endswith('.csv'):
-                print(f'\n Starting extract {i+1} cell out of {n_folder_file} ...')
-                fname_brd = os.path.join(path_folder, filename) 
-                border = np.loadtxt(fname_brd, delimiter=',', dtype=np.float32)
-                pc_part = pc.poly_cut(border, returned = 'area')
-
-                # dt_pc = np.array(np.c_[pc.points, pc.intensity], dtype=np.float32)
-                # dt_part = np.array(np.c_[pc_part.points, pc_part.intensity], dtype=np.float32)
-                # points_cell_set = set(tuple(p) for p in dt_part)
-                # pc_filtered = np.array([p for p in dt_pc if tuple(p) not in points_cell_set])
-                # try:
-                #     pc.points = pc_filtered[:,:3]
-                #     pc.intensity = pc_filtered[:,3]
-                # except:
-                #     pass
-
-                fname_part = os.path.join(path_folder, filename.partition('.csv')[0] + '.pcd') 
-                if pc_part.points.shape[0]>1:
-                    pc_part.save(fname_part)
-                i += 1
-
-
     def select_borders(self, path_folder, shp_poly, verbose = False):
         print(f'Starting create Voronoi partitions ...')
         vor = Voronoi(self.pts)
@@ -154,7 +126,7 @@ class VOR_TES(PCD):
                     np.savetxt(fname_brd, dt1, delimiter=',', header='x,y,z')
                     j += 1
 
-    def select_clusters_memory(self, shp_poly):
+    def select_clusters(self, shp_poly):
         """
         Process Voronoi cells and return dictionary of cell PCDs instead of saving to disk.
         
