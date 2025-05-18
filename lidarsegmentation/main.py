@@ -19,7 +19,7 @@ from lidarsegmentation.segmentation_clear import segmentation_clear
 # from seg_after import seg_after
 # from orbit_gif import orbit_gif
 from lidarsegmentation.predict import predict_mem
-from lidarsegmentation.parameters import parameters_mem
+from lidarsegmentation.parameters import parameters
 
 
 def str_to_bool(s: str) -> bool:
@@ -629,7 +629,7 @@ class WidgetGallery(QWidget):
         
         if self.checkBoxS5.isChecked() and combined_df is not None and clear_trees:
             try:
-                params_df = parameters_mem(ss, combined_df, clear_trees)
+                params_df = parameters(ss, combined_df, clear_trees)
                 # Save parameters
                 param_name = ss.fname_points.partition('.')[0] + "_Parameters.csv"
                 param_path = os.path.join(ss.path_base, param_name)

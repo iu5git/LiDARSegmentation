@@ -5,7 +5,7 @@ from lidarsegmentation.segmentation_clear import segmentation_clear
 from lidarsegmentation.seg_after import seg_after
 from lidarsegmentation.orbit_gif import orbit_gif
 from lidarsegmentation.predict import predict_mem
-from lidarsegmentation.parameters import parameters_mem
+from lidarsegmentation.parameters import parameters
 from lidarsegmentation.settings.seg_settings import SS
 
 def run_pipeline(ss, model_name='cpl1-1024-rp-s1024-pn2', save_final_pcds=True):
@@ -56,7 +56,7 @@ def run_pipeline(ss, model_name='cpl1-1024-rp-s1024-pn2', save_final_pcds=True):
     
     print("Calculating parameters...")
     try:
-        params_df = parameters_mem(ss, combined_df, clear_trees)
+        params_df = parameters(ss, combined_df, clear_trees)
         param_name = ss.fname_points.partition('.')[0] + "_Parameters.csv"
         param_path = os.path.join(ss.path_base, param_name)
         params_df.to_csv(param_path, index=False, sep=';')
