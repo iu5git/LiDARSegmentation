@@ -175,21 +175,26 @@ def merge_dfs(dfs, eps=0.25):
     
     return result_df.dropna().reset_index(drop=True)
 
-def merge_coordinates(cs, dfs=None):
+def merge_coordinates(cs: CS, dfs=None, save_to_disk: bool = True):
     """
     Legacy function that now works with in-memory DataFrames.
     
     Args:
         cs: Coordinate settings object
         dfs: Optional list of DataFrames to merge. If None, returns empty DataFrame
-        
+        save_to_disk: whether to write merged CSV to disk
     Returns:
         Merged DataFrame
     """
     if dfs is None or not dfs:
         return pd.DataFrame()
-        
     merged_df = merge_dfs(dfs)
+    if save_to_disk:
+        # Save merged coordinates CSV
+        filename = cs.fname_points.partition('.')[0] + "_Coordinates_Merged.csv"
+        save_path = os.path.join(cs.path_base, filename)
+        merged_df.to_csv(save_path, index=False, sep=';')
+        print(f"Saved merged coordinates to {save_path}")
     return merged_df
     
 if __name__ == "__main__":

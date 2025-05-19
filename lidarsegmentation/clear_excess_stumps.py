@@ -5,7 +5,7 @@ from lidarsegmentation.settings.coord_settings import CS
 from lidarsegmentation import predict
 from tqdm import tqdm
 
-def clear_excess_stumps(cs, merged_df=None, pcd_map=None):
+def clear_excess_stumps(cs: CS, merged_df=None, pcd_map=None, save_to_disk: bool = True):
     """
     Process the merged coordinates DataFrame and classify stumps.
     
@@ -13,6 +13,7 @@ def clear_excess_stumps(cs, merged_df=None, pcd_map=None):
         cs: Coordinate settings object
         merged_df: DataFrame containing merged coordinates
         pcd_map: Dictionary mapping stump names to PCD objects
+        save_to_disk: whether to write the resulting CSV to disk
         
     Returns:
         DataFrame with added classification labels
@@ -63,7 +64,12 @@ def clear_excess_stumps(cs, merged_df=None, pcd_map=None):
     
     # Combine original DataFrame with labels
     result_df = pd.concat([merged_df, labels_df], axis=1)
-    
+    # Save CSV if requested
+    if save_to_disk and not result_df.empty:
+        filename = cs.fname_points.partition('.')[0] + "_Clear_Excess.csv"
+        save_path = os.path.join(cs.path_base, filename)
+        result_df.to_csv(save_path, index=False, sep=';')
+        print(f"Saved clear-excess stumps to {save_path}")
     return result_df
 
 if __name__ == "__main__":

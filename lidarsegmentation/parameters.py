@@ -6,7 +6,7 @@ from lidarsegmentation.classes.PCD import PCD
 import pandas as pd
 from typing import Dict, Optional, Union, List
 
-def parameters(ss: SS, combined_df: pd.DataFrame, clear_trees: Dict[str, PCD], K: int = 0) -> pd.DataFrame:
+def parameters(ss: SS, combined_df: pd.DataFrame, clear_trees: Dict[str, PCD], K: int = 0, save_to_disk: bool = True) -> pd.DataFrame:
     """
     Calculate tree parameters from processed PCD objects
     
@@ -15,6 +15,7 @@ def parameters(ss: SS, combined_df: pd.DataFrame, clear_trees: Dict[str, PCD], K
         combined_df: Combined DataFrame with tree info
         clear_trees: Dictionary of final trunk PCD objects
         K: Optional starting index
+        save_to_disk: Flag to save the output CSV
         
     Returns:
         DataFrame with calculated tree parameters
@@ -117,7 +118,14 @@ def parameters(ss: SS, combined_df: pd.DataFrame, clear_trees: Dict[str, PCD], K
             param_lists[key].append(value)
     
     # Create DataFrame from collected parameters
-    return pd.DataFrame(param_lists)
+    params_df = pd.DataFrame(param_lists)
+    # Save parameters CSV if requested
+    if save_to_disk:
+        param_name = ss.fname_points.partition('.')[0] + "_Parameters.csv"
+        path_save = os.path.join(ss.path_base, param_name)
+        params_df.to_csv(path_save, index=False, sep=';')
+        print(f"Saved parameters to {path_save}")
+    return params_df
 
 if __name__ == "__main__" :
     from lidarsegmentation.segmentation_vor import segmentation_vor
