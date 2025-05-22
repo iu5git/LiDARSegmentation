@@ -9,10 +9,6 @@ from lidarsegmentation.classes.PCD_TREE import PCD_TREE
 from lidarsegmentation.classes.PCD_UTILS import PCD_UTILS
 from lidarsegmentation.classes.PCD import PCD
 
-def makedirs_if_not_exist(path):
-    if not os.path.exists(path):
-        os.makedirs(path)
-
 def clustering(pc_tree):
     P = pd.DataFrame(pc_tree.points, columns = ['X','Y','Z'])
     X = np.asarray(P)
@@ -23,71 +19,99 @@ def clustering(pc_tree):
         labels = np.zeros(pc_tree.points.shape[0])
     return labels
 
-def segmentation_clear(ss):
-    path_file_save = os.path.join(ss.path_base, ss.step1_folder_name, ss.step2_folder_name, ss.step3_folder_name)
-    makedirs_if_not_exist(path_file_save)
-
-    path_csv = os.path.join(ss.path_base, ss.fname_points.split(".")[0] + "_res.csv")
-    print(path_csv)
-
-    path_file = os.path.join(ss.path_base, ss.step1_folder_name, ss.step2_folder_name)
-    df = pd.read_csv(path_csv, sep=';')
-
-    inum=0
+def segmentation_clear(ss, combined_df, ram_trees):
+    """
+    Final segmentation stage to extract the main trunk of each tree
+    
+    Args:
+        ss: Segmentation settings
+        combined_df: Combined DataFrame with tree info from segmentation_ram
+        ram_trees: Dictionary of processed PCD objects from segmentation_ram
+        
+    Returns:
+        Dictionary of final trunk PCD objects keyed by filename
+    """
+    inum = 0
+    clear_trees = {}
    
-    for fname in tqdm(os.listdir(path_file)):
-        if fname.endswith('.pcd'):
-            inum+=1
-            if inum<ss.first_num:
+    for fname, pc_tree in tqdm(ram_trees.items(), desc="Processing trunks"):
+        inum += 1
+        if inum < ss.first_num:
+            continue
+        
+        try:
+            # Check if tree name exists in the DataFrame
+            if fname not in combined_df['Name_tree'].values:
+                print(f"Warning: {fname} not found in combined dataframe. Skipping.")
                 continue
-            
-            try:
-                pc_tree = PCD_TREE()
-                pc_tree.open(os.path.join(path_file, fname))
                 
-                labels = clustering(pc_tree)
+            labels = clustering(pc_tree)
 
-                min_z_values = []
-                for i in np.unique(labels):
-                    if i>-1:
-                        idx_layer=np.where(labels==i)
-                        i_data = pc_tree.points[idx_layer]
-                        index = i_data[:, 2].argmin()
-                        min_z_value = i_data[index]
-                        min_z_values.append(min_z_value)
-                min_z_values = np.asarray(min_z_values)
-                
-                idx_labels=np.where(min_z_values[:,2] < pc_tree.points.min(axis=0)[2]+1)
-                min_z_values = min_z_values[idx_labels]
-
-                centers_labels = []
-                for i in range(min_z_values.shape[0]):
+            min_z_values = []
+            for i in np.unique(labels):
+                if i>-1:
                     idx_layer=np.where(labels==i)
                     i_data = pc_tree.points[idx_layer]
-                    center = PCD_UTILS.center_m(i_data[:,0:2])
-                    centers_labels.append(center)
-                centers_labels = np.asarray(centers_labels)
+                    if i_data.shape[0] == 0:  # Skip empty clusters
+                        continue
+                    index = i_data[:, 2].argmin()
+                    min_z_value = i_data[index]
+                    min_z_values.append(min_z_value)
+                    
+            if len(min_z_values) == 0:
+                print(f"Warning: No valid clusters found for {fname}. Skipping.")
+                continue
                 
-                x_value = df.loc[df['Name_tree'] == fname, 'X'].values[0]
-                y_value = df.loc[df['Name_tree'] == fname, 'Y'].values[0]
-                main_center = [x_value, y_value]
+            min_z_values = np.asarray(min_z_values)
+            
+            idx_labels=np.where(min_z_values[:,2] < pc_tree.points.min(axis=0)[2]+1)
+            min_z_values = min_z_values[idx_labels]
+            
+            if min_z_values.shape[0] == 0:
+                print(f"Warning: No valid min Z values found for {fname}. Skipping.")
+                continue
 
-                distances = cdist(centers_labels, [main_center])
-                min_distance_index = np.argmin(distances)
+            centers_labels = []
+            for i in range(min_z_values.shape[0]):
+                idx_layer=np.where(labels==i)
+                i_data = pc_tree.points[idx_layer]
+                if i_data.shape[0] == 0:  # Skip empty clusters
+                    continue
+                center = PCD_UTILS.center_m(i_data[:,0:2])
+                centers_labels.append(center)
+                
+            if len(centers_labels) == 0:
+                print(f"Warning: No valid centers found for {fname}. Skipping.")
+                continue
+                
+            centers_labels = np.asarray(centers_labels)
+            
+            x_value = combined_df.loc[combined_df['Name_tree'] == fname, 'X'].values[0]
+            y_value = combined_df.loc[combined_df['Name_tree'] == fname, 'Y'].values[0]
+            main_center = [x_value, y_value]
 
-                pc_result = PCD(pc_tree.points, pc_tree.intensity)
-                idx_l=np.where(labels==min_distance_index)
-                pc_result.index_cut(idx_l)
+            distances = cdist(centers_labels, [main_center])
+            min_distance_index = np.argmin(distances)
 
-                filename = f"{fname}"
-                if pc_result.points.shape[0]>1:
-                    pc_result.save(os.path.join(path_file_save, filename))
-            except:
-                pass
+            pc_result = PCD(pc_tree.points, pc_tree.intensity)
+            idx_l=np.where(labels==min_distance_index)
+            pc_result.index_cut(idx_l)
 
+            if pc_result.points.shape[0]>1:
+                clear_trees[fname] = pc_result
+            else:
+                print(f"Warning: Trunk for {fname} has less than 2 points. Skipping.")
+        except Exception as e:
+            print(f"Error processing {fname}: {e}")
+    
+    return clear_trees
 
 if __name__ == "__main__" :
-    ss = SS()
+    from lidarsegmentation.segmentation_vor import segmentation_vor
+    from lidarsegmentation.segmentation_ram import segmentation_ram
     yml_path = "settings\settings.yaml"
-    ss.set(yml_path)
-    segmentation_clear(ss)
+    ss = SS.from_yaml(yml_path)
+    binding_df, vor_trees = segmentation_vor(ss, make_binding=True)
+    combined_df, ram_trees = segmentation_ram(ss, binding_df, vor_trees)
+    clear_trees = segmentation_clear(ss, combined_df, ram_trees)
+    print(f"Processed {len(clear_trees)} trees in Clear stage")

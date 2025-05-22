@@ -2,80 +2,91 @@ import os
 import pandas as pd
 import numpy as np
 from lidarsegmentation.settings.coord_settings import CS
-import shutil
 from lidarsegmentation import predict
 from tqdm import tqdm
 
-def count_num_files(cs):
-    txt_path = os.path.join(cs.path_base, "coordinates_paths.txt") 
-    file = open(txt_path, "r")
-    i = 0
-    while True:
-        line = file.readline()
-        if not line:
-            break
-        if line.strip() == '':
-            continue
-        i += 1
-    file.close()
-    return i
-
-def makedirs_if_not_exist(path):
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-
-def clear_excess_stumps(cs):
+def clear_excess_stumps(cs: CS, merged_df=None, pcd_map=None, save_to_disk: bool = True):
+    """
+    Process the merged coordinates DataFrame and classify stumps.
+    
+    Args:
+        cs: Coordinate settings object
+        merged_df: DataFrame containing merged coordinates
+        pcd_map: Dictionary mapping stump names to PCD objects
+        save_to_disk: whether to write the resulting CSV to disk
+        
+    Returns:
+        DataFrame with added classification labels
+    """
+    if merged_df is None or merged_df.empty or pcd_map is None:
+        return pd.DataFrame()
+    
     model_name = 'int0000_7000-512-rlish-s4762'
-    pth = os.path.join(cs.path_base, cs.fname_points.partition('.')[0] + "_Coordinates_Merged.csv")
-    df = pd.read_csv(pth, delimiter=";")
-
-    names_col = []
-    n = count_num_files(cs)
-    path_merged = os.path.join(cs.path_base, "merged")
-    makedirs_if_not_exist(path_merged)
-    first_n_columns = df.iloc[:, :n]
-    column_names = first_n_columns.columns
-    initial_labels = np.full((1, df.shape[0]),-1)
-    for i in tqdm(range(n)):
-        labels = []
-        parts = column_names[i].split("_")
-        parts_int = parts[-1]
-        if "." in parts_int:
-            parts_int = parts_int.split(".")[0]
-        names_col.append("Labels_"+str(parts_int))
-        path_int = os.path.join(cs.path_base, parts_int, cs.cut_data_method + '_cells', 'stumps')
-        for j in tqdm(range(df.shape[0])):
-            value = first_n_columns.at[j, column_names[i]]
-            if value != "File__Not__Found":
-                path_file = os.path.join(path_int, value)
-                path_save = os.path.join(path_merged, value)
-                try:
-                    shutil.copy2(path_file, path_save)
-
-                    label = predict.test(path_save, model_name)
-                    labels.append(label)   
-                except FileNotFoundError:
-                    print(f"No such file: {path_file}")
-                    labels.append(-3)
-            elif value == "File__Not__Found":
-                labels.append(-2)
+    
+    # Count unique intensity levels
+    name_cols = [col for col in merged_df.columns if col.startswith('Name_stump')]
+    n = len(name_cols)
+    
+    # Prepare for labels
+    labels_cols = []
+    for name_col in name_cols:
+        intensity = name_col.split('_')[-1]
+        if "." in intensity:
+            intensity = intensity.split(".")[0]
+        labels_cols.append(f"Labels_{intensity}")
+    
+    # Create DataFrame to hold labels
+    labels_df = pd.DataFrame(index=merged_df.index, columns=labels_cols)
+    labels_df.fillna(-1, inplace=True)
+    
+    # Process each intensity level
+    for i, name_col in enumerate(name_cols):
+        labels_col = labels_cols[i]
+        print(f"Processing {name_col} -> {labels_col}")
+        
+        for j in tqdm(range(merged_df.shape[0])):
+            stump_name = merged_df.at[j, name_col]
+            
+            if stump_name != "File__Not__Found":
+                # Get the PCD from memory
+                if stump_name in pcd_map:
+                    pcd_obj = pcd_map[stump_name]
+                    
+                    # Predict the label directly from the PCD object
+                    label = predict.predict_from_pcd(pcd_obj, model_name)
+                    labels_df.at[j, labels_col] = label
+                else:
+                    # PCD not found in memory
+                    print(f"No such PCD in memory: {stump_name}")
+                    labels_df.at[j, labels_col] = -3
             else:
-                print("ERROR")
-                break
-        labels = np.asarray([labels])
-        initial_labels = np.vstack([initial_labels, labels])
-    initial_labels = initial_labels.T
+                labels_df.at[j, labels_col] = -2
+    
+    # Combine original DataFrame with labels
+    result_df = pd.concat([merged_df, labels_df], axis=1)
+    # Save CSV if requested
+    if save_to_disk and not result_df.empty:
+        filename = cs.fname_points.partition('.')[0] + "_Clear_Excess.csv"
+        save_path = os.path.join(cs.path_base, filename)
+        result_df.to_csv(save_path, index=False, sep=';')
+        print(f"Saved clear-excess stumps to {save_path}")
+    return result_df
 
-    df_labels = pd.DataFrame(data = initial_labels[:,1:n+1], columns=names_col)
-    df_result = pd.concat([df, df_labels], axis=1)
-
-    save_pth = cs.fname_points.partition('.')[0] + "_Clear_Excess.csv"  
-    save_pth = os.path.join(cs.path_base, save_pth)
-    df_result.to_csv(save_pth, index = False, sep=';')
-
-if __name__ == "__main__" :
-    cs = CS()
+if __name__ == "__main__":
     yml_path = "settings\settings.yaml"
-    cs.set(yml_path)
-    clear_excess_stumps(cs)
+    cs = CS.from_yaml(yml_path)
+    
+    # For testing only - this would normally be called from main.py
+    # with actual DataFrames and PCD objects
+    test_df = pd.DataFrame({
+        'Name_stump_int7000': ['stump1', 'stump2', 'File__Not__Found'],
+        'X': [10.0, 20.0, 30.0],
+        'Y': [15.0, 25.0, 35.0],
+        'Diameter_int7000': [0.5, 0.6, 0.0],
+        'Name_stump_int5000': ['File__Not__Found', 'stump3', 'stump4'],
+        'Diameter_int5000': [0.0, 0.7, 0.8]
+    })
+    
+    # Test with empty PCD dict - would get -3 labels in real use
+    result = clear_excess_stumps(cs, test_df, {})
+    print(result)

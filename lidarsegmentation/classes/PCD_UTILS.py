@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from numpy.typing import NDArray
 import pprint
 from time import time
 from pypcd import pypcd #python -m pip install git+https://github.com/DanielPollithy/pypcd.git   
@@ -8,10 +9,13 @@ import pyvista
 import random
 import shapefile
 from shapely.geometry import Point, Polygon
-from numba import jit, njit
-import numba
+from scipy.spatial import ConvexHull
+from typing import List
+
 
 class PCD_UTILS:
+
+    @staticmethod
     def make_xyz_intensity_point_cloud(xyz_intensity, metadata=None):
         """ Make a pointcloud object from xyz array.
         xyz array is assumed to be float32.
@@ -38,7 +42,7 @@ class PCD_UTILS:
         pc = pypcd.PointCloud(md, pc_data)
         return pc
 
-
+    @staticmethod
     def PCD_OPEN_X_INT_RGB(file_path, verbose = False):
         """ Return data, indexes of fields 'x', 'Intensity' and 'rgb'
         Input:
@@ -55,23 +59,20 @@ class PCD_UTILS:
             print(f"Opening {file_path}")
             pprint.pprint(cloud.get_metadata())
         new_cloud_data = cloud.pc_data.view(np.float32).reshape(cloud.pc_data.shape + (-1,))
+
         if verbose:
             print(new_cloud_data)
             print(f"Shape: {new_cloud_data.shape}")
             end = time()-start
             print(f"Time opening: {end:.3f} s")
-        try:
-            ii = cloud.get_metadata()["fields"].index('Intensity')
-        except ValueError:
-            ii = None
-        try:
-            ir = cloud.get_metadata()["fields"].index('rgb')
-        except ValueError:
-            ir = None
-        ix = cloud.get_metadata()["fields"].index('x')
+
+        metadata = cloud.get_metadata()
+        ii = metadata["fields"].index('Intensity') if 'Intensity' in metadata["fields"] else None
+        ir = metadata["fields"].index('rgb') if 'rgb' in metadata["fields"] else None
+        ix = metadata["fields"].index('x')
         return new_cloud_data, ix, ii, ir 
     
-    
+    @staticmethod
     def farthest_point_sample(xyz, npoint, verbose = False):
         """
         Input:
@@ -95,7 +96,7 @@ class PCD_UTILS:
             farthest = torch.max(distance, -1)[1]
         return centroids
     
-    
+    @staticmethod
     def voronoi_finite_polygons_2d(vor, radius=None):
         """
         Reconstruct infinite voronoi regions in a 2D diagram to finite
@@ -176,6 +177,7 @@ class PCD_UTILS:
 
         return new_regions, np.asarray(new_vertices)
 
+    @staticmethod
     def inPolygon(x, y, xp, yp):
         """ Return true if x,y in tuples xp, yp
         Input:
@@ -192,11 +194,13 @@ class PCD_UTILS:
                 (x > (xp[i-1] - xp[i]) * (y - yp[i]) / (yp[i-1] - yp[i]) + xp[i])): c = 1 - c    
         return c
 
+    @staticmethod
     def is_point_inside_polygon(polygon, point):
         polygon_obj = Polygon(polygon)
         point_obj = Point(point)
         return polygon_obj.contains(point_obj)
     
+    @staticmethod
     def move_polygon(polygon, offsetX, offsetY, main_center, pump):
         """ Shifts the coordinates of the polygon, taking into account the offset and a small blow-up
         Input:
@@ -248,6 +252,35 @@ class PCD_UTILS:
               
         return new_polygon
 
+    @staticmethod
+    def merge_polygons(
+        polygon1: NDArray[np.float32],
+        polygon2: NDArray[np.float32]
+    ) -> List[NDArray[np.float32]]:
+        """
+        Merge two polygons by computing their convex hull.
+
+        Parameters
+        ----------
+        polygon1 : np.ndarray, shape (N, 2)
+            First polygon vertices.
+        polygon2 : np.ndarray, shape (M, 2)
+            Second polygon vertices.
+
+        Returns
+        -------
+        hull_pts : np.ndarray, shape (K, 2)
+            Vertices of the merged convex hull in counter‐clockwise order.
+        """
+        # Stack all points
+        pts = np.vstack((polygon1, polygon2))
+        # Compute convex hull
+        hull = ConvexHull(pts)
+        # Extract hull vertices in CCW order
+        hull_pts = pts[hull.vertices]
+        return hull_pts
+
+    @staticmethod
     def center_m(coords):
         """ Return barycenter of points based on median """
         x, y = None, None
@@ -265,6 +298,7 @@ class PCD_UTILS:
         center = x_m, y_m
         return center
     
+    @staticmethod
     def SOR (points, intensity = None):
         """ statistical outliers remove algorithm """
         pcd = o3d.geometry.PointCloud()
@@ -280,6 +314,7 @@ class PCD_UTILS:
         else:
             return res_points
     
+    @staticmethod
     def visual(points):
         p = pyvista.Plotter(window_size=[1000, 1000])
         pdata = pyvista.PolyData(points)
@@ -288,6 +323,7 @@ class PCD_UTILS:
         p.add_mesh(pc)
         p.show()
 
+    @staticmethod
     def visual_many(p, points, i, labels, main_cluster_id):
         idx_layer=np.where(labels==i)
         i_data = points[idx_layer]
@@ -304,6 +340,7 @@ class PCD_UTILS:
         p.add_mesh(pc, color)
         return p
     
+    @staticmethod
     def shp_open(file_shape):
         shape = shapefile.Reader(file_shape)
         feature = shape.shapeRecords()[0]
@@ -313,6 +350,7 @@ class PCD_UTILS:
             result = np.asarray(first['coordinates'])
         return result
     
+    @staticmethod
     def shift(points, x, y, z):
         x_shift = np.full((points.shape[0],1), x)
         y_shift = np.full((points.shape[0],1), y)
@@ -325,6 +363,7 @@ class PCD_UTILS:
             shift_matrix = np.concatenate([x_shift], axis=1)
         return points + shift_matrix
     
+    @staticmethod
     def shp_create(pc):
         min_values = np.min(pc.points, axis=0)
         max_values = np.max(pc.points, axis=0)
@@ -336,6 +375,7 @@ class PCD_UTILS:
         ])
         return shp_poly
     
+    @staticmethod
     def toFixed(numObj, digits=0):
         return f"{numObj:.{digits}f}"
 

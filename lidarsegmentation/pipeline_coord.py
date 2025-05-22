@@ -6,9 +6,8 @@ from lidarsegmentation.settings.coord_settings import CS
 
 
 if __name__ == "__main__" :
-    cs = CS()
     yml_path = "settings\settings.yaml"
-    cs.set(yml_path)
+    cs = CS.from_yaml(yml_path)
     coordinates(7000, cs)
     coordinates(5000, cs)
     coordinates(1000, cs)

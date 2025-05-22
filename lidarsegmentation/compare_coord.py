@@ -169,9 +169,8 @@ def compare_coord(cs, eps = 0.3):
 
 
 if __name__ == "__main__" :
-    cs = CS()
     yml_path = "settings\settings.yaml"
-    cs.set(yml_path)
+    cs = CS.from_yaml(yml_path)
     eps=0
     while eps<0.6:
         if eps == 0:

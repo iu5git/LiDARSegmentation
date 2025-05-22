@@ -56,34 +56,6 @@ class VOR_TES(PCD):
         plt.show()
 
 
-    def select_clusters(self, path_folder):
-        print(f'Starting saving voronoi tessellation cells ...')
-        i = 0
-        n_folder_file = len(os.listdir(path_folder))
-        pc = PCD_AREA(points = self.points, intensity = self.intensity)
-        for filename in tqdm(os.listdir(path_folder)):
-            if filename.endswith('.csv'):
-                print(f'\n Starting extract {i+1} cell out of {n_folder_file} ...')
-                fname_brd = os.path.join(path_folder, filename) 
-                border = np.loadtxt(fname_brd, delimiter=',', dtype=np.float32)
-                pc_part = pc.poly_cut(border, returned = 'area')
-
-                # dt_pc = np.array(np.c_[pc.points, pc.intensity], dtype=np.float32)
-                # dt_part = np.array(np.c_[pc_part.points, pc_part.intensity], dtype=np.float32)
-                # points_cell_set = set(tuple(p) for p in dt_part)
-                # pc_filtered = np.array([p for p in dt_pc if tuple(p) not in points_cell_set])
-                # try:
-                #     pc.points = pc_filtered[:,:3]
-                #     pc.intensity = pc_filtered[:,3]
-                # except:
-                #     pass
-
-                fname_part = os.path.join(path_folder, filename.partition('.csv')[0] + '.pcd') 
-                if pc_part.points.shape[0]>1:
-                    pc_part.save(fname_part)
-                i += 1
-
-
     def select_borders(self, path_folder, shp_poly, verbose = False):
         print(f'Starting create Voronoi partitions ...')
         vor = Voronoi(self.pts)
@@ -153,5 +125,69 @@ class VOR_TES(PCD):
                     fname_brd = os.path.join(path_folder, filename_border) 
                     np.savetxt(fname_brd, dt1, delimiter=',', header='x,y,z')
                     j += 1
+
+    def select_clusters(self, shp_poly):
+        """
+        Process Voronoi cells and return dictionary of cell PCDs instead of saving to disk.
+        
+        Args:
+            shp_poly: Shapefile polygon to use for cutting
+            
+        Returns:
+            Dictionary mapping cell_id -> CELL object
+        """
+        print('Processing voronoi tessellation cells in memory...')
+        
+        # First get the regions and vertices
+        vor = Voronoi(self.pts)
+        regions, vertices = PCD_UTILS.voronoi_finite_polygons_2d(vor)
+        
+        # Create border polygons first
+        shp_ply = Polygon(shp_poly)
+        borders = []
+        
+        for i in range(self.n_clusters):
+            polys = []
+            for region_idx, region in enumerate(regions):
+                if self.algo.labels_[region_idx] == i:
+                    polygon = vertices[region]
+                    poly = Polygon(polygon)
+                    polys.append(poly)
+            
+            if polys:
+                multi_poly = unary_union(polys)
+                cut_poly = multi_poly.intersection(shp_ply)
+                
+                if isinstance(cut_poly, Polygon):
+                    polygon_xy = np.asarray(cut_poly.exterior.coords.xy)       
+                    polygon = np.vstack((polygon_xy[0], polygon_xy[1])).T.reshape(-1, 2)
+                    z = np.zeros(polygon.shape[0])
+                    borders.append(np.c_[polygon, z])
+                    
+                elif hasattr(cut_poly, 'geoms'):  # MultiPolygon
+                    for j, poly_item in enumerate(cut_poly.geoms):
+                        polygon_xy = np.asarray(poly_item.exterior.coords.xy)       
+                        polygon = np.vstack((polygon_xy[0], polygon_xy[1])).T.reshape(-1, 2)
+                        z = np.zeros(polygon.shape[0])
+                        borders.append(np.c_[polygon, z])
+        
+        # Now process each cell
+        cells_dict = {}
+        pc_area = PCD_AREA(points=self.points, intensity=self.intensity)
+        
+        for i, border in enumerate(borders):
+            # Cut by border
+            pc_part = pc_area.poly_cut(border, returned='area')
+            
+            if pc_part.points.shape[0] > 1:
+                # Convert PCD_AREA to CELL for compatibility with extract_stumps_labels
+                from lidarsegmentation.classes.CELL import CELL
+                cell_obj = CELL(points=pc_part.points, intensity=pc_part.intensity)
+                
+                cell_id = f"{i:04d}.pcd"
+                cells_dict[cell_id] = cell_obj
+        
+        print(f'Processed {len(cells_dict)} cells in memory')
+        return cells_dict
 
 

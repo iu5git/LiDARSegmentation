@@ -17,6 +17,9 @@ import math
 import circle_fit as cf
 import statistics
 from scipy.spatial import ConvexHull
+from typing import Optional
+from sklearn.neighbors import KNeighborsClassifier
+
 
 class PCD_TREE(PCD):
     def __init__(self, points = None, intensity = None, RGBint = None, coordinate = None, polygon = None, lower_coordinate = None, upper_coordinate = None, offset = [0.0, 0.0],
@@ -86,7 +89,14 @@ class PCD_TREE(PCD):
 
         return pc_chosen, min_dist_i, labels
     
-    def search_upper_coordinate(self, pc_chosen, main_cluster_id = 0, verbose = False, lbls = None):
+    def search_upper_coordinate(
+        self, 
+        pc_chosen, 
+        main_cluster_id: int = 0,  
+        lbls = None, 
+        cluster_max_size: Optional[int] = None, 
+        verbose: bool = False
+    ):
         
         if pc_chosen.points.shape[0] > 0:
             center_chosen_data_m = np.asarray(self.lower_coordinate)[0:2]
@@ -100,8 +110,32 @@ class PCD_TREE(PCD):
             XCH = np.asarray(CH_norm)
 
             try:
-                clustering = DBSCAN(eps=0.05, min_samples=100).fit(XCH)
-                labels=clustering.labels_
+                # Subsample if there are too many points to avoid memory issues
+                if cluster_max_size is not None and XCH.shape[0] > cluster_max_size:
+                    print(f"Number of points in XCH: {XCH.shape[0]}")
+                    print(f"Subsampling to {cluster_max_size} points")
+                    # Randomly select cluster_max_size samples if there are too many points
+                    sampled_indices = np.random.choice(XCH.shape[0], cluster_max_size, replace=False)
+                    XCH_sample = XCH[sampled_indices]
+                    clustering = DBSCAN(eps=0.05, min_samples=100).fit(XCH_sample)
+                    # Map labels back to original indices
+                    sampled_labels = clustering.labels_
+                    knn = KNeighborsClassifier(n_neighbors=5)
+                    knn.fit(XCH_sample, sampled_labels)
+                    # Create a mask for unsampled points
+                    unsampled_mask = np.ones(XCH.shape[0], dtype=bool)
+                    unsampled_mask[sampled_indices] = False
+                    # Predict labels for unsampled points
+                    unsampled_indices = np.where(unsampled_mask)[0]
+                    predicted_labels = knn.predict(XCH[unsampled_indices])
+                    # Construct labels
+                    labels = np.full(XCH.shape[0], -1)
+                    labels[sampled_indices] = sampled_labels
+                    labels[unsampled_indices] = predicted_labels
+                else:
+                    # No subsampling
+                    clustering = DBSCAN(eps=0.05, min_samples=100).fit(XCH)
+                    labels = clustering.labels_
 
                 idx_labels=np.where(labels<0)
                 points_for_center = pc_for_center.points[idx_labels]
@@ -154,10 +188,16 @@ class PCD_TREE(PCD):
         offsetY = self.upper_coordinate[1] - self.lower_coordinate[1]
         self.offset = [offsetX, offsetY]
     
-    def process_layer(self, EPS, MIN_SAMPLES, verbose = False):
+    def process_layer(self, EPS, MIN_SAMPLES, cluster_max_size: Optional[int] = None, verbose: bool = False):
         if self.points.shape[0]>1:
             pc_chosen, main_cluster_id, lbls = self.search_main_cluster(EPS, MIN_SAMPLES)
-            self.search_upper_coordinate(pc_chosen, main_cluster_id = main_cluster_id, verbose = verbose, lbls = lbls)
+            self.search_upper_coordinate(
+                pc_chosen, 
+                main_cluster_id=main_cluster_id, 
+                cluster_max_size=cluster_max_size, 
+                verbose=verbose, 
+                lbls=lbls
+            )
         else:
             self.upper_coordinate = self.lower_coordinate
             self.points = np.asarray([[0,0,0]])
@@ -182,11 +222,15 @@ class PCD_TREE(PCD):
 
     def search_slice(self, intensity_cut = 0):
         pc_slice = PCD_TREE(points = self.points, intensity = self.intensity)
-        idx_labels=np.where((pc_slice.points[:,2] > pc_slice.points.min(axis=0)[2]) & (pc_slice.points[:,2] <= pc_slice.points.min(axis=0)[2] + 2))
+        slice_min = pc_slice.points.min(axis=0)[2]
+        # Filter points from lowest point to 2m above the lowest point
+        idx_labels = np.where((pc_slice.points[:, 2] > slice_min) & (pc_slice.points[:, 2] <= slice_min + 2))[0]
         pc_slice.index_cut(idx_labels)
+
         idx_labels = np.where(pc_slice.intensity >= intensity_cut)
         pc_slice.index_cut(idx_labels)
-        pc_slice.RGBint = pc_slice.intensity/max(pc_slice.intensity)
+
+        pc_slice.RGBint = pc_slice.intensity / max(pc_slice.intensity)
         return pc_slice
 
     def expansion_via_spheres(check, chosen, main_coordinate):
@@ -199,7 +243,14 @@ class PCD_TREE(PCD):
             dist = math.sqrt((point_main[0] - main_coordinate[0])**2 + (point_main[1] - main_coordinate[1])**2)
             if dist <= 0.3:
                 d = 0.1
-                idx_labels=np.where((check_points[:,0]>point_main[0]-d) & (check_points[:,0]<point_main[0]+d) & (check_points[:,1]>point_main[1]-d) & (check_points[:,1]<point_main[1]+d)& (check_points[:,2]>point_main[2]-d) & (check_points[:,2]<point_main[2]+d))
+                idx_labels=np.where(
+                    (check_points[:, 0] > point_main[0] - d) & \
+                    (check_points[:, 0] < point_main[0] + d) & \
+                    (check_points[:, 1] > point_main[1] - d) & \
+                    (check_points[:, 1] < point_main[1] + d) & \
+                    (check_points[:, 2] > point_main[2] - d) & \
+                    (check_points[:, 2] < point_main[2] + d)
+                )
                 ch_points = check_points[idx_labels]
                 ch_intensity = check_intensity[idx_labels]
                 if j == 0:
@@ -209,6 +260,7 @@ class PCD_TREE(PCD):
                     r_points = np.vstack((r_points, ch_points))
                     r_intensity = np.hstack((r_intensity, ch_intensity))
                 j += 1
+
         if r_points.shape[0]>1:
             r_points_set = list(set(tuple(x) for x in r_points.tolist()))
             r_points_set = np.asarray(r_points_set)
@@ -234,17 +286,27 @@ class PCD_TREE(PCD):
         XCH = np.asarray(CH)
 
         clustering = DBSCAN(eps=0.05, min_samples=100).fit(XCH)
-        labels=clustering.labels_
-        idx_labels=np.where(labels<0)
+        labels = clustering.labels_
+        idx_labels = np.where(labels < 0)[0]
 
-        pc_pfc = PCD_TREE(points = pc_slice.points, intensity = pc_slice.intensity)
+        pc_pfc = PCD_TREE(points=pc_slice.points, intensity=pc_slice.intensity)
         pc_pfc.index_cut(idx_labels)
 
-        idx_labels=np.where((pc_pfc.points[:,0]>self.main_coordinate[0]-dim) & (pc_pfc.points[:,0]<self.main_coordinate[0]+dim) & (pc_pfc.points[:,1]>self.main_coordinate[1]-dim) & (pc_pfc.points[:,1]<self.main_coordinate[1]+dim))
+        idx_labels=np.where(
+            (pc_pfc.points[:, 0] > self.main_coordinate[0] - dim) & \
+            (pc_pfc.points[:, 0] < self.main_coordinate[0] + dim) & \
+            (pc_pfc.points[:, 1] > self.main_coordinate[1] - dim) & \
+            (pc_pfc.points[:, 1] < self.main_coordinate[1] + dim)
+        )[0]
         pc_pfc.index_cut(idx_labels)
 
-        pc_chosen = PCD_TREE(points = self.points, intensity = self.intensity)
-        idx_labels=np.where((pc_chosen.points[:,0]>self.main_coordinate[0]-dim) & (pc_chosen.points[:,0]<self.main_coordinate[0]+dim) & (pc_chosen.points[:,1]>self.main_coordinate[1]-dim) & (pc_chosen.points[:,1]<self.main_coordinate[1]+dim))
+        pc_chosen = PCD_TREE(points=self.points, intensity=self.intensity)
+        idx_labels=np.where(
+            (pc_chosen.points[:, 0] > self.main_coordinate[0] - dim) & \
+            (pc_chosen.points[:, 0] < self.main_coordinate[0] + dim) & \
+            (pc_chosen.points[:, 1] > self.main_coordinate[1] - dim) & \
+            (pc_chosen.points[:, 1] < self.main_coordinate[1] + dim)
+        )[0]
         pc_chosen.index_cut(idx_labels)
 
         pc_expsph = PCD_TREE.expansion_via_spheres(pc_chosen, pc_pfc, self.main_coordinate)
