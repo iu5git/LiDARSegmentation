@@ -68,7 +68,7 @@ def segmentation_vor(ss: SS, make_binding: bool = True):
     pc_area.open(file_name_data, verbose = True)
     pc_area.unique()
     pc_area.coordinates = coords
-    if file_shape is not None and os.path.exists(file_shape):
+    if file_shape is not None and file_shape != '' and os.path.exists(file_shape):
         shp_poly = PCD_UTILS.shp_open(file_shape)
     else:
         shp_poly = PCD_UTILS.shp_create(pc_area)
