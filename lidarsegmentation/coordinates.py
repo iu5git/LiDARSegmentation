@@ -17,11 +17,11 @@ def coordinates(intensity_cut_make, cs):
     # Return dict: map of stump name to PCD objects
     pcd_map = {}
     
-    if cs.fname_traj is not None:
+    if cs.fname_traj is not None and cs.fname_traj != '':
         file_name_traj = os.path.join(cs.path_base, cs.fname_traj)
-    if cs.fname_points is not None:
+    if cs.fname_points is not None and cs.fname_points != '':
         file_name_data = os.path.join(cs.path_base, cs.fname_points)
-    if cs.fname_shape is not None:
+    if cs.fname_shape is not None and cs.fname_shape != '':
         file_shape = os.path.join(cs.path_base, cs.fname_shape)
 
     # Keep track of PC data in memory instead of saving to file
@@ -38,7 +38,7 @@ def coordinates(intensity_cut_make, cs):
         pc_area.open(file_name_data, verbose=True)
         pc_area.points = PCD_UTILS.shift(pc_area.points, cs.x_shift, cs.y_shift, cs.z_shift)
 
-        if file_shape is not None and os.path.exists(file_shape):
+        if file_shape is not None and file_shape != '' and os.path.exists(file_shape):
             shp_poly = PCD_UTILS.shp_open(file_shape)
             shp_poly = PCD_UTILS.shift(shp_poly, cs.x_shift, cs.y_shift, cs.z_shift)
             # Cut by polygon shape
@@ -68,7 +68,7 @@ def coordinates(intensity_cut_make, cs):
             pc_area.index_cut(np.where(pc_area.intensity >= intensity_cut_make))
             pc_area.points = PCD_UTILS.shift(pc_area.points, cs.x_shift, cs.y_shift, cs.z_shift)
 
-            if file_shape is not None and os.path.exists(file_shape):
+            if file_shape is not None and file_shape != '' and os.path.exists(file_shape):
                 shp_poly = PCD_UTILS.shp_open(file_shape)
                 shp_poly = PCD_UTILS.shift(shp_poly, cs.x_shift, cs.y_shift, cs.z_shift)
             else:
