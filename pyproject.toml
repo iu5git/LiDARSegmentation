@@ -7,7 +7,7 @@ name = "lidarsegmentation"
 version = "0.1.0"
 description = "Locating Trees and Individual Tree Segmentation Using Deep Learning Models LiDAR Based"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
@@ -103,7 +103,7 @@ dependencies = [
     "pyzmq>=25.0.2",
     "requests>=2.28.2",
     "scikit-learn>=1.0.2",
-    "scipy>=1.7.3",
+    "scipy>=1.9.3",
     "scooby>=0.7.1",
     "seaborn>=0.12.2",
     "shapely>=2.0.1",
