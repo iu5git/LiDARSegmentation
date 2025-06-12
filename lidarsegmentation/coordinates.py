@@ -17,6 +17,7 @@ def coordinates(intensity_cut_make, cs):
     # Return dict: map of stump name to PCD objects
     pcd_map = {}
     
+    file_name_traj, file_name_data, file_shape = None, None, None
     if cs.fname_traj is not None and cs.fname_traj != '':
         file_name_traj = os.path.join(cs.path_base, cs.fname_traj)
     if cs.fname_points is not None and cs.fname_points != '':
@@ -25,8 +26,7 @@ def coordinates(intensity_cut_make, cs):
         file_shape = os.path.join(cs.path_base, cs.fname_shape)
 
     # Keep track of PC data in memory instead of saving to file
-    pc_area = None
-    pc_traj = None
+    pc_area, pc_traj = None, None
     
     if cs.cut_data_method == 'flood_fill' and (cs.FLAG_cut_data or cs.FLAG_make_cells):
         pc_traj = PCD()
