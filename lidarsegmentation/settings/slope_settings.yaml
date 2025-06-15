@@ -1,0 +1,80 @@
+slope_steepness:
+  # Тип задачи
+  task_type: "slope_steepness"
+
+  save_after_stage: true
+
+  # Папка для вывода результатов
+  slope_output_folder: "slope_steepness"
+
+  # Настройки выделения опорных точек (земли)
+  slope_ground_method: "progressive_morphology"  # "progressive_morphology", "cloth_simulation", "ransac"
+  slope_cell_size: 0.5
+  slope_max_window_size: 21
+  slope_threshold: 0.3
+  slope_initial_distance: 0.1
+  slope_max_distance: 3.0
+  slope_ground_threshold: 0.2
+
+  # Настройки симуляции ткани (cloth simulation)
+  slope_cloth_resolution: 0.5
+  slope_max_iterations: 500
+  slope_height_threshold: 0.5
+
+  # Настройки RANSAC
+  slope_ransac_threshold: 0.2
+  slope_ransac_iterations: 1000
+
+  # DBSCAN settings
+  dbscan_eps:  1.5
+  dbscan_min_samples: 10
+  dbscan_ground_label: 0  # метка для точек земли в результатах DBSCAN
+
+  # OPTICS settings
+  optics_min_samples: 10
+  optics_ground_label: 0  # метка для точек земли в результатах OPTICS
+
+  statistic_percentile: 95
+
+  sf_slope_threshold: 10.0   # порог угла, градусы
+  sf_window_size: 5            # число соседей
+
+
+  # Настройки заполнения пустот
+  slope_void_method: "linear"  # "cubic", "nearest", "linear"
+  slope_grid_resolution: 0.5
+
+  # Построение меша
+  slope_mesh_method: "delaunay"  # "delaunay", "poisson", "alpha_shape"
+  slope_normal_radius: 0.1
+  slope_normal_max_nn: 30
+  slope_poisson_depth: 8
+  slope_alpha: 0.5
+
+  # Классификация уклонов (раскраска)
+  slope_color_method: "angle"  # "gradient", "angle", "classified"
+  slope_class_ranges:
+    - [0, 5]
+    - [5, 15]
+    - [15, 30]
+    - [30, 45]
+    - [45, 90]
+
+  # Настройки изогипс (изолиний)
+  slope_isohypse_method: "filled_contour"  # "contour", "filled_contour", "hillshade"
+  slope_contour_interval: 1.0
+  slope_hillshade_exaggeration: 10.0
+
+  tile_points: 100000  # Размер тайла для обработки больших данных
+  overlap: 0.1  # Перекрытие тайлов
+
+# Можно добавить секцию paths, если необходимы дополнительные пути к данным:
+paths:
+  # Пример:
+  input_folder: "test_data"
+  output_folder: "test_data"
+
+  # имя файла с данными облака (.pcd, .las, .copc.laz)
+  fname_points: "test_data\\CL2_BG43_2023_1000_5013.copc.laz"
+
+  path_base: "."
