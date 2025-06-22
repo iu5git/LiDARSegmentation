@@ -1,7 +1,9 @@
+import os
+from time import time
+
 import torch
 import numpy as np
 import pprint
-from time import time
 from lidarsegmentation.classes.PCD_UTILS import PCD_UTILS
 import open3d as o3d
 import laspy
@@ -31,9 +33,11 @@ class PCD:
             end = time()-start
             print(f"Time saving: {end:.3f} s")
 
-
     def open(self, file_path, mode = 'intensity', verbose = False):
         """ open .pcd with intensity """
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File {file_path} does not exist.")
+
         if file_path.endswith('.pcd'):
             if verbose:
                 start = time()
@@ -54,7 +58,25 @@ class PCD:
                 print(f"Time stacking data: {end:.3f} s")
             self.points, self.intensity = points, intensity
 
-        if file_path.endswith('.las'):
+        elif file_path.endswith('.copc.laz'):
+            if verbose:
+                start = time()
+                print(f"Opening .copc.laz file ...")
+            with open(file_path, "rb") as f:
+                las = laspy.CopcReader(f)
+                all_points = las.query()
+                points = np.vstack([all_points.x, all_points.y, all_points.z]).transpose()
+                try:
+                    intensity = np.asarray(all_points.intensity, dtype=np.int32)
+                except AttributeError:
+                    intensity = np.zeros(points.shape[0])
+                intensity = np.nan_to_num(intensity)
+                if verbose:
+                    end = time() - start
+                    print(f"Time reading: {end:.3f} s")
+                self.points, self.intensity = points, intensity
+
+        elif file_path.endswith('.las') or file_path.endswith('.laz'):
             if verbose:
                 start = time()
                 print(f"Opening .las file ...")
@@ -70,6 +92,8 @@ class PCD:
                 end = time()-start
                 print(f"Time stacking data: {end:.3f} s")
             self.points, self.intensity = points, intensity
+        else:
+            raise ValueError("Unsupported file format. Please use .pcd, .las, or .copc.laz files.")
 
     def sample_fps(self, num_sample, verbose = False):
         """ sampling 'num_sample' points from 'PCD' class via farthest point sampling algorithm """
@@ -131,5 +155,3 @@ class PCD:
         pl.open_gif(path_gif)
         pl.orbit_on_path(path, write_frames=True)
         pl.close()
-
-

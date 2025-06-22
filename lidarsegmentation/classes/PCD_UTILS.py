@@ -281,6 +281,54 @@ class PCD_UTILS:
         return hull_pts
 
     @staticmethod
+    def split_points_to_tiles(points, tile_points, overlap=0.0):
+        """
+        Разбивает массив точек на тайлы квадратного размера tile_size (с опциональным overlap).
+
+        Args:
+            points: numpy.ndarray формы (N, 3) — входное облако точек
+            tile_points: int — количество точек в одном тайле
+            overlap: float — доля перекрытия [0.0–1.0], например 0.1 = 10% перекрытия
+
+        Возвращает:
+            Список словарей, где каждый словарь содержит:
+            - 'points': numpy.ndarray с точками, попадающими в данный тайл
+            - 'bounds': кортеж (x0, y0, x1, y1) — границы тайла в пространстве
+            - 'index': кортеж (i, j) — номер тайла по осям X и Y
+        """
+        x_min, y_min, _ = np.min(points, axis=0)
+        x_max, y_max, _ = np.max(points, axis=0)
+
+        print(f"Points bounds: x_min={x_min}, x_max={x_max}, y_min={y_min}, y_max={y_max}")
+
+        tile_size = np.sqrt(tile_points / (len(points) / (np.abs(x_max - x_min)*np.abs(y_max - y_min))))
+
+        print(f"Calculated tile size: {tile_size}")
+        # Шаг смещения с учётом перекрытия
+        step = tile_size * (1.0 - overlap)
+        x_starts = np.arange(x_min, x_max, step)
+        y_starts = np.arange(y_min, y_max, step)
+
+        tiles = []
+        for i, x0 in enumerate(x_starts):
+            for j, y0 in enumerate(y_starts):
+                x1 = x0 + tile_size
+                y1 = y0 + tile_size
+
+                mask = (
+                    (points[:, 0] >= x0) & (points[:, 0] < x1) &
+                    (points[:, 1] >= y0) & (points[:, 1] < y1)
+                )
+                tile_pts = points[mask]
+                if tile_pts.size > 0:
+                    tiles.append({
+                        'points': tile_pts,
+                        'bounds': (x0, y0, x1, y1),
+                        'index': (i, j)
+                    })
+        return tiles
+
+    @staticmethod
     def center_m(coords):
         """ Return barycenter of points based on median """
         x, y = None, None
