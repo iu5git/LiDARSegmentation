@@ -109,8 +109,8 @@ cut_data_method: "voronoi_tessellation" #рекомендуется
 
 1. **Установка**:
     ```bash
-    conda create --name pcPCDenv379 python==3.7.9
-    conda activate pcPCDenv379
+    conda create --name pcPCDenv39 python==3.9.16
+    conda activate pcPCDenv39
     pip install git+https://github.com/iu5git/LiDARSegmentation/
     ```
     По умолчанию, `torch` при установке должен определить конфигурацию и самостоятельно выбрать наиболее подходящий `wheel`. В случае проблем с авто-определением, установите его отдельно и повторите установку библиотеки:
